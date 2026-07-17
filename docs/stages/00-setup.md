@@ -12,10 +12,20 @@ Działające fundamenty: repozytorium git, środowisko Python, lokalny n8n, smok
 - [ ] Smoke test: wywołanie `claude -p "..."` z Pythona (subprocess), w tym `--model haiku`
 
 ## Decyzje i dlaczego
-<!-- uzupełniane w trakcie pracy -->
+
+- **2026-07-17** — Git od pierwszego dnia, z prywatnym remote na GitHubie. Powód: metoda „PRD jako living document" wymaga commitów przy każdej zmianie zakresu, a dokumentacja zawiera realne informacje zdrowotne właściciela — repo musi pozostać prywatne (publiczna wersja portfolio = osobny, zredagowany wariant).
+- **2026-07-17** — Szkielet folderów utworzony z góry, przed kodem. Powód: fizycznie istniejąca struktura egzekwuje regułę prywatności ścieżek (`data/` = treść medyczna, poza gitem) lepiej niż sam zapis w CLAUDE.md — przyszła sesja nie wymyśli własnych ścieżek. Pliki natomiast powstają dopiero w swoich etapach — bez pustych stubów na zapas.
+- **2026-07-17** — `data/` ignorowane w całości (jeden wpis), nie per-plik. Powód: reguła „nowy artefakt medyczny = automatycznie poza gitem" bez pamiętania o aktualizacji `.gitignore`.
+- **2026-07-17** — Reguły przekrojowe (workflow etapów, Mermaid, ścieżki) w CLAUDE.md, szczegóły w docs. Powód: CLAUDE.md jest ładowany automatycznie do każdej sesji — to jedyne miejsce z gwarancją przeczytania.
 
 ## Jak to działa (mechanizmy narzędzi)
-<!-- uzupełniane w trakcie pracy: notatki o mechanizmach, nie log czynności -->
+
+- **2026-07-17** — Git nie śledzi pustych folderów — stąd `.gitkeep` w `config/` i `src/`. Ścieżki ignorowane (`data/*`) nie istnieją w świeżym klonie w ogóle, więc kod pipeline'u musi robić `mkdir -p` przy starcie.
+- **2026-07-17** — CLAUDE.md vs docs to progressive disclosure: krótka reguła zawsze w kontekście, pełna instrukcja doczytywana na żądanie — ten sam mechanizm co skille w Claude Code (opis w kontekście, treść ładowana przy użyciu).
+- **2026-07-17** — Weryfikacja prywatności repo bez `gh`: `curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/<owner>/<repo>` — `404` bez autoryzacji oznacza repo prywatne (lub nieistniejące), `200` = publiczne.
 
 ## Gotchas / lekcje
-<!-- uzupełniane w trakcie pracy -->
+
+- **2026-07-17** — Deklaracja w czacie ≠ wykonanie: model napisał „git init odhaczony rzeczywistością", nie edytując pliku etapu. Wykryte przez właściciela; skutek: obowiązkowy workflow w CLAUDE.md (checkbox natychmiast po akcji, z datą i commitem).
+- **2026-07-17** — Polskie cudzysłowy `„..."` w etykietach Mermaid łamią parser GitHuba (`got 'STR'`) — incydent w diagramie V5, fix w commit `88e5dc2`. Reguła: etykiety w `["..."]`, zero `"` w treści.
+- **2026-07-17** — `gh` CLI nie jest zainstalowane na tej maszynie — `brew install gh` przy domykaniu etapu 0.

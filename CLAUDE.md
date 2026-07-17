@@ -58,7 +58,7 @@ Implementacja podzielona na etapy `00`–`08`; każdy plik w `docs/stages/` ma s
 
 Reguły prowadzenia tych plików (projekt służy też nauce właściciela):
 
-- Podczas pracy nad etapem **dopisuj do jego pliku** decyzje z uzasadnieniem, mechanizmy narzędzi (jak coś działa pod spodem) i gotchas — z krótkim kontekstem edukacyjnym.
+- Podczas pracy nad etapem **dopisuj do jego pliku** decyzje z uzasadnieniem, mechanizmy narzędzi (jak coś działa pod spodem) i gotchas — z krótkim kontekstem edukacyjnym. **Każdy wpis zaczyna się od daty** (`**YYYY-MM-DD** — ...`), żeby sekcje czytało się chronologicznie bez git blame.
 - **Nie prowadź tam logu czynności** („zrobiliśmy X, potem Y") — od tego jest git history. Zapisuj tylko to, co nieoczywiste i użyteczne za miesiąc.
 - Nie powielaj treści PRD — zakres i wymagania żyją w `docs/prd.md`.
 - Odhaczaj checkboxy w Zakres/DoD w miarę realizacji; etap skończony = wszystkie odhaczone lub świadomie skreślone z adnotacją.

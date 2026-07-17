@@ -10,6 +10,29 @@ Każda wersja kończy się działającym produktem i nie wymaga przepisywania po
 
 ---
 
+## Fundament — Version 1 (w realizacji)
+
+Pełny zakres i wymagania: `docs/prd.md`. Diagram poglądowy — wszystkie kolejne wersje budują na tych modułach:
+
+```mermaid
+flowchart TD
+    IN["Nowy dokument<br>upload ręczny / folder Google Drive"] --> N8N["n8n<br>wyłącznie orkiestracja"]
+    N8N --> OCR["OCR: Docling<br>+ Apple Vision dla zdjęć"]
+    OCR --> CLS{"Klasyfikacja<br>dokumentu"}
+
+    CLS -->|"strukturalny ~30%"| ST["Standaryzacja<br>aliases.yml → regex → units.yml"]
+    ST --> AV["Weryfikacja nieznanych nazw<br>claude -p --model haiku"]
+    AV --> PA["pending/*.yml<br>operator zatwierdza"]
+
+    CLS -->|"narracyjny ~70%"| PR["Presidio<br>pseudonimizacja PII"]
+    PR --> EX["Ekstrakcja ustaleń<br>claude -p"]
+    EX --> PF["pending/findings<br>operator zatwierdza"]
+
+    PA & PF --> D[("Magazyn NDJSON<br>append-only, BigQuery-ready")]
+    D --> AN["Analiza trendów<br>Claude Code w terminalu"]
+    AN --> RP["Raport Markdown<br>na wizytę lekarską"]
+```
+
 ## Version 2 — RAG nad korpusem narracyjnym
 
 Chunking → embedding → vector database (Qdrant lub ChromaDB) → retriever → LLM.

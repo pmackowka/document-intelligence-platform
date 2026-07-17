@@ -32,6 +32,7 @@ Zasady przekrojowe:
 - **Anonimizacja**: Microsoft Presidio — `PlPeselRecognizer` wbudowany; polski NER wymaga spaCy `pl_core_news_lg` jako NLP engine.
 - **LLM: wyłącznie Claude przez abonament Pro — zero zakupu tokenów API.** Wywołania programistyczne przez Claude Code headless: `claude -p "<prompt>"` jako komenda shell z Pythona/n8n. Weryfikacja aliasów: Haiku (`--model`). Nie dodawaj kodu używającego kluczy API Anthropic ani SDK z rozliczeniem tokenowym.
 - Kod i nazwy po angielsku, komentarze i docstringi po polsku.
+- Diagramy Mermaid: etykiety węzłów zawsze w cudzysłowach (`A["..."]`), bez znaku `"` w treści etykiet — pełne reguły i historia incydentu na końcu `docs/roadmap.md`.
 
 ## Praca etapami — `docs/stages/`
 

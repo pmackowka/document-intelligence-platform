@@ -37,6 +37,12 @@ Zasady przekrojowe:
 
 Implementacja podzielona na etapy `00`–`08`; każdy plik w `docs/stages/` ma sekcje: Cel, Zakres/DoD, Decyzje i dlaczego, Jak to działa, Gotchas. Kolejność plików = kolejność pracy (zależności: etap 5 wymaga 2 i 4).
 
+**Workflow obowiązkowy w każdej sesji implementacyjnej:**
+
+1. Na starcie ustal bieżący etap: pierwszy plik w `docs/stages/` z nieodhaczonymi checkboxami. Przeczytaj go przed rozpoczęciem pracy.
+2. **Natychmiast po wykonaniu akcji z checkboxa odhacz go** (z datą i konkretem, np. numerem commita) — nie na końcu sesji, nie „w domyśle". Deklaracja w czacie, że coś zrobiono, bez edycji pliku etapu = zadanie niewykonane.
+3. Wykonana praca spoza checkboxów, która domyka element etapu — dopisz jako nowy odhaczony checkbox.
+
 Reguły prowadzenia tych plików (projekt służy też nauce właściciela):
 
 - Podczas pracy nad etapem **dopisuj do jego pliku** decyzje z uzasadnieniem, mechanizmy narzędzi (jak coś działa pod spodem) i gotchas — z krótkim kontekstem edukacyjnym.

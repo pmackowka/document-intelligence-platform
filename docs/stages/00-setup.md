@@ -4,7 +4,7 @@
 Działające fundamenty: repozytorium git, środowisko Python, lokalny n8n, smoke test `claude -p`.
 
 ## Zakres / Definition of Done
-- [ ] `git init` + pierwszy commit (PRD, CLAUDE.md, struktura docs)
+- [x] `git init` + pierwszy commit (PRD, CLAUDE.md, struktura docs) — 2026-07-17, commit `2e5e144`, remote github.com/pmackowka/Document-Intelligence-Platform
 - [ ] Środowisko Python (uv), struktura projektu (`src/`, `config/`, `data/`)
 - [ ] `data/` w `.gitignore` — dokumenty medyczne nigdy nie trafiają do repo
 - [ ] n8n uruchomiony lokalnie, pierwszy testowy workflow

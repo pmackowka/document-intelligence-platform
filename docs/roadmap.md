@@ -116,3 +116,13 @@ flowchart TD
 
 - **Legal** (umowy, NDA, pisma) — uwaga z sesji: to inny pipeline niż medyczny; wspólne tylko OCR + Presidio (~30% reuse). Realistyczny start: ścieżka „anonymize & ask" bez strukturyzacji.
 - **Finance** (faktury, raporty), **HR** (CV, umowy), **Technical** (instrukcje, manuale).
+
+---
+
+## Uwaga techniczna dla przyszłych sesji — diagramy Mermaid
+
+Przy edycji lub dodawaniu diagramów w tym repo:
+
+- **Etykiety węzłów zawsze w cudzysłowach**: `A["etykieta"]`, nie `A[etykieta]` — obowiązkowo gdy etykieta zawiera dwukropek, przecinek, `+`, nawiasy lub polskie znaki interpunkcyjne.
+- **Żadnych cudzysłowów wewnątrz etykiet** (także polskich `„..."`) — znak `"` w treści etykiety łamie parser GitHuba (incydent: diagram V5, commit `88e5dc2`; objaw: `Unable to render rich display, got 'STR'`). Cytaty parafrazuj bez cudzysłowów.
+- Po każdej zmianie diagramu zweryfikuj render na GitHubie, nie tylko lokalnie.

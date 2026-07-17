@@ -77,12 +77,12 @@ Agent potrafiący wyszukiwać dokumenty, analizować historię, wykonywać wielo
 
 ```mermaid
 flowchart TD
-    U[Użytkownik:<br>„przygotuj mnie do wizyty u nefrologa"] --> A[Agent<br>planowanie kroków]
-    A -->|krok 1| T1[MCP: search_findings<br>ustalenia nerkowe]
-    A -->|krok 2| T2[MCP: get_marker_trend<br>kreatynina, eGFR]
-    A -->|krok 3| T3[RAG: opisy USG<br>jamy brzusznej]
+    U["Użytkownik:<br>przygotuj mnie do wizyty u nefrologa"] --> A["Agent<br>planowanie kroków"]
+    A -->|krok 1| T1["MCP: search_findings<br>ustalenia nerkowe"]
+    A -->|krok 2| T2["MCP: get_marker_trend<br>kreatynina, eGFR"]
+    A -->|krok 3| T3["RAG: opisy USG<br>jamy brzusznej"]
     T1 & T2 & T3 --> S[Synteza wieloetapowa]
-    S --> O[Raport na wizytę<br>+ pytania do lekarza]
+    S --> O["Raport na wizytę<br>+ pytania do lekarza"]
 ```
 
 ---

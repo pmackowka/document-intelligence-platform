@@ -8,6 +8,7 @@ Warstwa pseudonimizacji przed jakimkolwiek wysłaniem tekstu dokumentu do API. C
 - [ ] Encje: nazwiska, adresy, telefony, PESEL (`PlPeselRecognizer` — wbudowany, walidacja sumy kontrolnej), e-mail
 - [ ] Pseudonimizacja spójna (Jan Kowalski → PERSON_001, konsekwentnie w dokumencie)
 - [ ] Test jakości na próbce realnych dokumentów — szczególnie adresy (zidentyfikowane ryzyko z PRD)
+- [ ] Pomiar recall na złotym zbiorze z etapu 2 (ręcznie zanonimizowana próbka = ground truth: porównaj wykrycia Presidio z listą ręcznych podmian)
 - [ ] Jeśli adresy/nazwiska wykrywane słabo → custom recognizer lub deny-lista
 
 ## Decyzje i dlaczego

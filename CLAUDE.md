@@ -24,6 +24,17 @@ Zasady przekrojowe:
 - **Magazyn danych**: katalog NDJSON, płaskie rekordy append-only, schemat BigQuery-ready (ręczny load; bez SQLite, bez bazy).
 - **Wiedza domenowa w YAML**, nie w kodzie: `aliases.yml`, `units.yml`, `reference_ranges.yml`, `laboratories.yml`. Dodanie laboratorium nie może wymagać zmiany kodu.
 - **Ścieżki artefaktów (reguła prywatności)**: wszystko, co zawiera treść medyczną — surowe dokumenty, `pending/` (propozycje aliasów/ustaleń), magazyn NDJSON — żyje pod `data/` (w `.gitignore`). Wersjonowane są wyłącznie `config/` (YAML domenowy bez PII), kod i docs. Nigdy nie twórz plików z treścią medyczną poza `data/`.
+
+  ```
+  config/          # YAML domenowy (aliases, units, ...) — wersjonowany
+  src/             # kod Python — wersjonowany
+  data/raw/        # surowe dokumenty wejściowe        — lokalnie
+  data/pending/    # propozycje do zatwierdzenia        — lokalnie
+  data/store/      # magazyn NDJSON (źródło prawdy)     — lokalnie
+  data/reports/    # raporty Markdown                   — lokalnie
+  ```
+
+  Podfoldery `data/` istnieją tylko lokalnie (git nie śledzi ignorowanych ścieżek) — kod pipeline'u tworzy je przy starcie (`mkdir -p`).
 - **Kolejność implementacji**: pipeline strukturalny najpierw, ale ekstrakcję narracyjną zwaliduj na 5–10 przykładowych opisach zanim zbudujesz wokół niej resztę.
 
 ## Stack i ograniczenia techniczne

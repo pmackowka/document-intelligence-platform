@@ -1,7 +1,7 @@
 # PRD: Document Intelligence Platform — Version 1
 
-> Status: DRAFT v2 (sesja sokratejska 2026-07-17, po 1. rundzie review). Sekcje oznaczone ⚠️ wymagają uzupełnienia przed zamrożeniem dokumentu.
-> Kontrakt dla wszystkich sesji z agentem. Każda zmiana zakresu = aktualizacja tego pliku.
+> Status: **v1.0 — zatwierdzony** (2026-07-17, po sesji sokratejskiej i 2 rundach review). Wszystkie decyzje produktowe zamknięte.
+> Kontrakt dla wszystkich sesji z agentem. Każda zmiana zakresu = aktualizacja tego pliku + commit.
 
 ---
 
@@ -109,7 +109,7 @@ Wymóg prywatności jest **miękki**. Dokumenty źródłowe i tak przechowywane 
 | Limity abonamentu Pro współdzielone z interaktywną pracą w Claude Code | Backfill narracyjny rozłożony w czasie (~3 dok./dzień wystarcza dla S3); przetwarzanie wsadowe poza godzinami własnej pracy; przy wyczerpaniu limitu backfill po prostu zwalnia — świadomie zaakceptowane |
 | Zakresy referencyjne różnią się między laboratoriami | Zakres zapisywany per pomiar (z dokumentu), nie globalnie |
 
-## Open Questions ⚠️
+## Do weryfikacji w trakcie implementacji
 
 1. **Kolejność implementacji (plan, nie wymaganie):** start od pipeline'u strukturalnego (szybka wygrana, S1/S2), ale walidacja ekstrakcji narracyjnej na 5–10 przykładowych opisach **przed** budową reszty modułu narracyjnego — potwierdzone przez właściciela.
 2. **Weryfikacja adresów w Presidio pl:** jakość NER na realnych dokumentach do sprawdzenia na próbce w 1. tygodniu implementacji (PESEL/e-mail/telefon — wbudowane, ryzyko niskie).

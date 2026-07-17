@@ -1,4 +1,7 @@
-# Dane medyczne — NIGDY nie trafiają do repo (nawet prywatnego)
+# Dane medyczne — NIGDY nie trafiają do repo (nawet prywatnego).
+# Konwencja: WSZYSTKIE artefakty runtime z treścią medyczną żyją pod data/
+# (data/pending/, data/store/, data/raw/). Wersjonujemy tylko config/ (YAML
+# z wiedzą domenową: aliasy, jednostki — bez PII) i kod.
 data/
 
 # Python

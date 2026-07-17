@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Stan projektu
 
-Faza przed implementacją — repozytorium zawiera na razie wyłącznie dokumentację. **`docs/prd.md` jest kontraktem: każdą sesję zaczynaj od jego przeczytania i działaj zgodnie z nim.** Każda zmiana zakresu wymaga aktualizacji `docs/prd.md`, nie tylko kodu. `docs/Document-Intelligence-Platform.md` to pierwotny zarys z roadmapą wersji V1–V5 — kontekst historyczny; przy sprzeczności wygrywa PRD.
+Faza przed implementacją — repozytorium zawiera na razie wyłącznie dokumentację. **`docs/prd.md` jest kontraktem: każdą sesję zaczynaj od jego przeczytania i działaj zgodnie z nim.** Każda zmiana zakresu wymaga aktualizacji `docs/prd.md`, nie tylko kodu. `docs/roadmap.md` to backlog wersji V2–V5 — nie implementuj z niego niczego w ramach V1.
 
 ## Czym jest ten projekt
 

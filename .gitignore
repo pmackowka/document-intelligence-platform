@@ -1,0 +1,15 @@
+# Dane medyczne — NIGDY nie trafiają do repo (nawet prywatnego)
+data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Sekrety i konfiguracja lokalna
+.env
+.claude/settings.local.json
+
+# macOS
+.DS_Store

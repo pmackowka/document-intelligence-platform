@@ -26,15 +26,18 @@ Zasady przekrojowe:
 - **Ścieżki artefaktów (reguła prywatności)**: wszystko, co zawiera treść medyczną — surowe dokumenty, `pending/` (propozycje aliasów/ustaleń), magazyn NDJSON — żyje pod `data/` (w `.gitignore`). Wersjonowane są wyłącznie `config/` (YAML domenowy bez PII), kod i docs. Nigdy nie twórz plików z treścią medyczną poza `data/`.
 
   ```
-  config/          # YAML domenowy (aliases, units, ...) — wersjonowany
-  src/             # kod Python — wersjonowany
-  data/raw/        # surowe dokumenty wejściowe        — lokalnie
-  data/pending/    # propozycje do zatwierdzenia        — lokalnie
-  data/store/      # magazyn NDJSON (źródło prawdy)     — lokalnie
-  data/reports/    # raporty Markdown                   — lokalnie
+  config/               # YAML domenowy (aliases, units, ...) — wersjonowany
+  src/                  # kod Python — wersjonowany
+  data/raw/structural/  # surowe dok. strukturalne (krew/mocz)  — lokalnie
+  data/raw/narrative/   # surowe dok. narracyjne (USG/MRI/TK)   — lokalnie
+  data/pending/         # propozycje do zatwierdzenia            — lokalnie
+  data/store/           # magazyn NDJSON (źródło prawdy)         — lokalnie
+  data/reports/         # raporty Markdown                       — lokalnie
   ```
 
   Podfoldery `data/` istnieją tylko lokalnie (git nie śledzi ignorowanych ścieżek) — kod pipeline'u tworzy je przy starcie (`mkdir -p`).
+
+  Podział `data/raw/{structural,narrative}/` to **realny układ ingestu**: klasę nadaje operator ręcznie przy uploadzie przez n8n (human-in-the-loop, nie klasyfikator automatyczny — PRD Scope V1 pkt 3), a plik ląduje w podfolderze swojej klasy. Ingest wyłącznie ręczny — **brak konektora Google Drive** (usunięty w PRD v1.1).
 - **Kolejność implementacji**: pipeline strukturalny najpierw, ale ekstrakcję narracyjną zwaliduj na 5–10 przykładowych opisach zanim zbudujesz wokół niej resztę.
 
 ## Stack i ograniczenia techniczne

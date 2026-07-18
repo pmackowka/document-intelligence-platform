@@ -4,9 +4,9 @@
 Spięcie modułów w workflow: nowy dokument → pipeline → zapis → powiadomienie. n8n wyłącznie orkiestruje — zero logiki biznesowej (reguła z PRD).
 
 ## Zakres / Definition of Done
-- [ ] Trigger ręczny (upload) — ścieżka podstawowa
-- [ ] Konektor folderu Google Drive — ścieżka automatyczna
-- [ ] Wywołanie modułów Python przez Execute Command; obsługa klasyfikacji dokumentu (strukturalny/narracyjny)
+- [ ] Trigger ręczny (upload) z ręczną etykietą klasy — jedyna ścieżka ingestu (PRD v1.1)
+- [ ] ~~Konektor folderu Google Drive — ścieżka automatyczna~~ — skreślone (PRD v1.1: ingest wyłącznie ręczny, bez konektora Drive)
+- [ ] Wywołanie modułów Python przez Execute Command; routing do pipeline'u wg ręcznej etykiety klasy operatora (Switch: strukturalny/narracyjny — nie klasyfikacja automatyczna)
 - [ ] Powiadomienie o dokumentach czekających na zatwierdzenie w `pending/`
 - [ ] Nowy dokument przechodzi end-to-end w ≤15 min pracy operatora (test S4)
 

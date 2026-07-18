@@ -16,9 +16,9 @@ Pełny zakres i wymagania: `docs/prd.md`. Diagram poglądowy — wszystkie kolej
 
 ```mermaid
 flowchart TD
-    IN["Nowy dokument<br>upload ręczny / folder Google Drive"] --> N8N["n8n<br>wyłącznie orkiestracja"]
+    IN["Nowy dokument<br>upload ręczny + etykieta klasy"] --> N8N["n8n<br>wyłącznie orkiestracja"]
     N8N --> OCR["OCR: Docling<br>+ Apple Vision dla zdjęć"]
-    OCR --> CLS{"Klasyfikacja<br>dokumentu"}
+    OCR --> CLS{"Routing wg etykiety<br>klasy (operator)"}
 
     CLS -->|"strukturalny ~30%"| ST["Standaryzacja<br>aliases.yml → regex → units.yml"]
     ST --> AV["Weryfikacja nieznanych nazw<br>claude -p --model haiku"]

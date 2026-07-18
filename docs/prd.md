@@ -1,7 +1,9 @@
 # PRD: Document Intelligence Platform — Version 1
 
-> Status: **v1.0 — zatwierdzony** (2026-07-17, po sesji sokratejskiej i 2 rundach review). Wszystkie decyzje produktowe zamknięte.
+> Status: **v1.1 — zatwierdzony** (v1.0: 2026-07-17, po sesji sokratejskiej i 2 rundach review). Wszystkie decyzje produktowe zamknięte.
 > Kontrakt dla wszystkich sesji z agentem. Każda zmiana zakresu = aktualizacja tego pliku + commit.
+>
+> **v1.1 (2026-07-18):** (1) ingest tylko ręczny upload przez n8n — usunięty konektor Google Drive; (2) klasyfikacja dokumentu = ręczna etykieta operatora przy uploadzie (human-in-the-loop), a nie klasyfikator automatyczny.
 
 ---
 
@@ -39,9 +41,9 @@ Progi zatwierdzone przez właściciela (runda review 1):
 
 ### In scope (must have)
 
-1. **Ingest przez n8n:** trigger ręczny (upload) oraz konektor folderu Google Drive. Formaty: PDF, skany (PDF/JPG/PNG), zdjęcia (HEIC/JPG).
+1. **Ingest przez n8n:** wyłącznie ręczny upload przez n8n (operator dodaje pliki sam). Konektor Google Drive **usunięty z V1**. Formaty: PDF, skany (PDF/JPG/PNG), zdjęcia (HEIC/JPG).
 2. **OCR / konwersja:** Docling (główny silnik) + Apple Vision jako backend OCR dla zdjęć. Wyjście pośrednie: Markdown + JSON.
-3. **Klasyfikacja dokumentu** na jedną z dwóch klas:
+3. **Klasyfikacja dokumentu** na jedną z dwóch klas — **etykieta nadawana ręcznie przez operatora przy uploadzie** (human-in-the-loop, nie klasyfikator automatyczny): operator wskazuje klasę, n8n routuje (Switch) do właściwego pipeline'u, plik ląduje w `data/raw/{structural,narrative}/`. Uzasadnienie: klasyfikacja automatyczna jest zawodna, a operator i tak jest w pętli — ręczna etykieta to najtańszy i najpewniejszy klasyfikator; usuwa z V1 komponent automatycznego klasyfikatora. Klasy:
    - **Strukturalne** (badania krwi, moczu — tabele marker/wartość/jednostka/zakres),
    - **Narracyjne** (opisy USG, MRI, TK, kolonoskopii i podobne).
 4. **Pipeline strukturalny — standaryzacja:**
@@ -70,13 +72,15 @@ Progi zatwierdzone przez właściciela (runda review 1):
 - Dziennik interwencji/stylu życia (dieta, suplementy, leki) — korelacje z kontekstem życiowym tylko przez ręczne dopisanie w prompcie analizy. Kandydat na V1.1.
 - Jakiekolwiek UI / dashboard / wykresy — konsumpcja wyłącznie plikowo + terminal.
 - Automatyczny load do BigQuery (format ma być gotowy, load ręczny).
+- Konektor Google Drive (auto-pull z folderu) — usunięty w v1.1; ingest wyłącznie przez ręczny upload w n8n.
+- Automatyczny klasyfikator dokumentów — klasę nadaje operator ręcznie przy uploadzie (v1.1).
 - RAG, wektorowa baza (V2); FastAPI/Docker/Cloud Run (V3); MCP server (V4); agenci (V5).
 - Interpretacja medyczna / rekomendacje zdrowotne jako feature — raporty LLM to materiał do rozmowy z lekarzem, nie diagnoza.
 - Twarde gwarancje prywatności (patrz Threat Model).
 
 ## User Stories
 
-1. Jako właściciel danych chcę wrzucić plik (upload lub folder Drive), aby system bez mojego udziału doprowadził go do postaci znormalizowanej i poprosił mnie wyłącznie o zatwierdzenia.
+1. Jako właściciel danych chcę wrzucić plik przez n8n z ręczną etykietą klasy (strukturalne/narracyjne), aby system bez mojego dalszego udziału doprowadził go do postaci znormalizowanej i poprosił mnie wyłącznie o zatwierdzenia.
 2. Jako analityk chcę zapytać w terminalu „pokaż trend ferrytyny od 2021", aby dostać wartości z datami, jednostką kanoniczną i zakresem referencyjnym.
 3. Jako analityk chcę porównać dwa markery na osi czasu (Fe vs CRP), aby szukać zależności między nimi.
 4. Jako pacjent przygotowujący się do wizyty chcę wygenerować raport Markdown z trendów + ustaleń narracyjnych (np. kamień nerkowy 6 mm w 2023 → 8 mm w 2025), aby omówić go z lekarzem.

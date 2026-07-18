@@ -53,13 +53,13 @@ Implementacja podzielona na etapy `00`–`08`; każdy plik w `docs/stages/` ma s
 **Workflow obowiązkowy w każdej sesji implementacyjnej:**
 
 1. Na starcie ustal bieżący etap: pierwszy plik w `docs/stages/` z nieodhaczonymi checkboxami. Przeczytaj go przed rozpoczęciem pracy.
-2. **Natychmiast po wykonaniu akcji z checkboxa odhacz go** (z konkretem, np. numerem commita) — nie na końcu sesji, nie „w domyśle". Deklaracja w czacie, że coś zrobiono, bez edycji pliku etapu = zadanie niewykonane.
+2. **Natychmiast po wykonaniu akcji z checkboxa odhacz go** (z krótkim konkretem co zrobiono — bez dat i numerów commitów, chronologię trzyma git) — nie na końcu sesji, nie „w domyśle". Deklaracja w czacie, że coś zrobiono, bez edycji pliku etapu = zadanie niewykonane.
 3. Wykonana praca spoza checkboxów, która domyka element etapu — dopisz jako nowy odhaczony checkbox.
 
 **Sekcja `## Notatki` — jak ją prowadzić** (projekt służy też nauce właściciela; te notatki są materiałem do czytania i powtórki):
 
 - **Grupuj po temacie, nie po dacie.** Każdy temat to nagłówek `### <czego dotyczy>` (zwykle krok z Zakresu lub użyte narzędzie), a pod nim samodzielna notatka do nauki.
-- Pod tematem układ: **Decyzja** (co ustalono) → **Dlaczego** (uzasadnienie, trade-offy) → **Jak działa** (mechanizm narzędzia pod spodem — sedno wartości edukacyjnej) → **Pułapki** (co zaskoczyło). Nie każdy temat wymaga wszystkich czterech.
+- Pod tematem układ: **Decyzja** (co ustalono) → **Dlaczego** (uzasadnienie, trade-offy) → **Jak działa** (mechanizm narzędzia pod spodem — sedno wartości edukacyjnej) → **Pułapki** (co zaskoczyło). Nie każdy temat wymaga wszystkich czterech. **Każdy podpunkt w osobnym akapicie** (pusta linia między nimi) — inaczej markdown skleja je w jeden blok i notatka jest nieczytelna.
 - **Bez dat** — chronologię trzyma git; notatka ma być czytelnym wyjaśnieniem, nie changelogiem.
 - **Nie log czynności** („zrobiliśmy X, potem Y") — zapisuj tylko to, co nieoczywiste i użyteczne za miesiąc.
 - Nie powielaj treści PRD — zakres i wymagania żyją w `docs/prd.md`.

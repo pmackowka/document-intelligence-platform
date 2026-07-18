@@ -48,20 +48,23 @@ Zasady przekrojowe:
 
 ## Praca etapami — `docs/stages/`
 
-Implementacja podzielona na etapy `00`–`08`; każdy plik w `docs/stages/` ma sekcje: Cel, Zakres/DoD, Decyzje i dlaczego, Jak to działa, Gotchas. Kolejność plików = kolejność pracy (zależności: etap 5 wymaga 2 i 4).
+Implementacja podzielona na etapy `00`–`08`; każdy plik w `docs/stages/` ma sekcje: **Cel**, **Zakres / Definition of Done** (checkboxy = kroki) i **Notatki**. Kolejność plików = kolejność pracy (zależności: etap 5 wymaga 2 i 4).
 
 **Workflow obowiązkowy w każdej sesji implementacyjnej:**
 
 1. Na starcie ustal bieżący etap: pierwszy plik w `docs/stages/` z nieodhaczonymi checkboxami. Przeczytaj go przed rozpoczęciem pracy.
-2. **Natychmiast po wykonaniu akcji z checkboxa odhacz go** (z datą i konkretem, np. numerem commita) — nie na końcu sesji, nie „w domyśle". Deklaracja w czacie, że coś zrobiono, bez edycji pliku etapu = zadanie niewykonane.
+2. **Natychmiast po wykonaniu akcji z checkboxa odhacz go** (z konkretem, np. numerem commita) — nie na końcu sesji, nie „w domyśle". Deklaracja w czacie, że coś zrobiono, bez edycji pliku etapu = zadanie niewykonane.
 3. Wykonana praca spoza checkboxów, która domyka element etapu — dopisz jako nowy odhaczony checkbox.
 
-Reguły prowadzenia tych plików (projekt służy też nauce właściciela):
+**Sekcja `## Notatki` — jak ją prowadzić** (projekt służy też nauce właściciela; te notatki są materiałem do czytania i powtórki):
 
-- Podczas pracy nad etapem **dopisuj do jego pliku** decyzje z uzasadnieniem, mechanizmy narzędzi (jak coś działa pod spodem) i gotchas — z krótkim kontekstem edukacyjnym. **Każdy wpis zaczyna się od daty** (`**YYYY-MM-DD** — ...`), żeby sekcje czytało się chronologicznie bez git blame.
-- **Nie prowadź tam logu czynności** („zrobiliśmy X, potem Y") — od tego jest git history. Zapisuj tylko to, co nieoczywiste i użyteczne za miesiąc.
+- **Grupuj po temacie, nie po dacie.** Każdy temat to nagłówek `### <czego dotyczy>` (zwykle krok z Zakresu lub użyte narzędzie), a pod nim samodzielna notatka do nauki.
+- Pod tematem układ: **Decyzja** (co ustalono) → **Dlaczego** (uzasadnienie, trade-offy) → **Jak działa** (mechanizm narzędzia pod spodem — sedno wartości edukacyjnej) → **Pułapki** (co zaskoczyło). Nie każdy temat wymaga wszystkich czterech.
+- **Bez dat** — chronologię trzyma git; notatka ma być czytelnym wyjaśnieniem, nie changelogiem.
+- **Nie log czynności** („zrobiliśmy X, potem Y") — zapisuj tylko to, co nieoczywiste i użyteczne za miesiąc.
 - Nie powielaj treści PRD — zakres i wymagania żyją w `docs/prd.md`.
-- Odhaczaj checkboxy w Zakres/DoD w miarę realizacji; etap skończony = wszystkie odhaczone lub świadomie skreślone z adnotacją.
+
+Etap skończony = wszystkie checkboxy odhaczone lub świadomie skreślone z adnotacją.
 
 ## Out of scope V1 (nie implementuj bez zmiany PRD)
 

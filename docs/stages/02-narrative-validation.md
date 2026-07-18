@@ -13,11 +13,14 @@ Sprawdzić na 5–10 opisach (USG, MRI, kolonoskopia), czy ekstrakcja ustaleń p
 ## Instrukcja ręcznej anonimizacji
 Ręcznie, bo Presidio jeszcze nie istnieje, a reguła twarda z PRD obejmuje też sesję Claude Code (to też API Anthropic). PII w polskich opisach siedzi w nagłówku/stopce: pacjent (nazwisko → `PERSON_001`, PESEL → `PESEL_001`, data urodzenia → `DOB_001`, adres → `ADDRESS_001`), lekarz + PWZ → `DOCTOR_001`, placówka/nr badania → `FACILITY_001`/`EXAM_ID_001`. **Zostaje**: data badania (oś czasu) i cała treść medyczna. ~3–5 min/dokument.
 
-## Decyzje i dlaczego
-<!-- uzupełniane w trakcie pracy -->
+## Notatki
+<!-- Grupuj po temacie, nie po dacie (chronologię trzyma git). Dla każdego tematu:
 
-## Jak to działa (mechanizmy narzędzi)
-<!-- uzupełniane w trakcie pracy -->
+### <Temat / czego dotyczy>
+**Decyzja:** co ustalono.
+**Dlaczego:** uzasadnienie, trade-offy.
+**Jak działa:** mechanizm narzędzia pod spodem — sedno nauki.
+**Pułapki:** co zaskoczyło, na co uważać.
 
-## Gotchas / lekcje
-<!-- uzupełniane w trakcie pracy -->
+Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, nie log czynności. -->
+

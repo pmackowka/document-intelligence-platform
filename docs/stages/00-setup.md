@@ -11,7 +11,7 @@ Działające fundamenty: repozytorium git, środowisko Python, lokalny n8n, smok
 - [x] n8n uruchomiony lokalnie (Docker Compose, v2.27.4) + dostęp Claude Code przez serwer MCP (scope local w `~/.claude.json`)
 - [x] Pierwszy testowy workflow n8n (przez narzędzia n8n MCP) — `008 — Document Intelligence: pierwszy workflow testowy (MCP smoke test)`, Manual Trigger → Edit Fields; zbudowany, zwalidowany i uruchomiony (execution `success`)
 - [x] Smoke test: wywołanie `claude -p "..."` z Pythona (subprocess), w tym `--model haiku` — `src/smoke_test_claude.py`, oba wywołania OK (model domyślny → `4`, Haiku → `cztery`)
-- [ ] (osobno, po MCP) upgrade n8n z 2.27.4 do najnowszej — `docker compose pull && up -d`, re-test endpointu MCP
+- [x] (osobno, po MCP) upgrade n8n z 2.27.4 do najnowszej (2.30.7) — `docker compose pull && up -d`; migracje bazy czyste, klucz szyfrujący OK, 9 workflow całych, endpoint MCP ponownie Connected
 
 ## Notatki
 
@@ -59,6 +59,14 @@ Dane trwałe: wolumen Docker `n8n_data` (`external: true`), zamontowany na `/hom
 - Realny klucz szyfrujący żyje w wolumenie (`/home/node/.n8n/config`), nie w `.env`. Odczyt: `docker exec n8n sh -c 'cat /home/node/.n8n/config'`. Gdyby kiedyś wstrzykiwać klucz przez env, musi DOKŁADNIE zgadzać się z tym z wolumenu — inaczej „Mismatching encryption keys" i credentiale się nie odszyfrują.
 - `.env` jest w `.gitignore` katalogu n8n (`.env`, `*.env`) — sekrety nigdy do repo.
 - Wolumen jest `external` → utworzony poza compose; `docker compose down -v` go NIE usunie (bezpieczne), ale ręczne `docker volume rm n8n_data` skasuje wszystkie workflow i credentiale.
+
+### Upgrade n8n (podmiana obrazu Docker)
+
+**Decyzja:** upgrade przez `docker compose pull && up -d` (obraz bez tagu = `latest`), z backupem wolumenu tuż przed startem. Wykonany: 2.27.4 → 2.30.7.
+
+**Jak działa:** `pull` ściąga nowy obraz, `up -d` odtwarza kontener z tego obrazu; wolumen `external` (`n8n_data`) zostaje ten sam, więc workflow, credentiale i klucz szyfrujący przeżywają podmianę. n8n przy starcie sam uruchamia migracje bazy — w logach widoczne jako pary `Starting migration ...` / `Finished migration ...`.
+
+**Pułapki:** migracje bazy są **jednokierunkowe** — po majorze downgrade obrazu może się wysypać na schemacie, dlatego backup wolumenu przed upgradem: `docker run --rm -v n8n_data:/data:ro -v <cel>:/backup alpine tar czf /backup/n8n.tar.gz -C /data .`. Rollback wymaga przypięcia starego tagu w compose (`image: docker.n8n.io/n8nio/n8n:2.27.4`), bo `latest` sam z siebie nie pozwala wrócić. Weryfikacja po upgradzie: logi (migracje + brak „Mismatching encryption keys"), `claude mcp list` (Connected) oraz lista workflow przez MCP (potwierdza, że dane całe).
 
 ### Dostęp Claude Code do n8n (serwer MCP)
 

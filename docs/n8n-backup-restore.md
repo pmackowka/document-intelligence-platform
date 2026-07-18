@@ -22,56 +22,61 @@ Snapshot pełny = **tar wolumenu `n8n_data`** + **`docker-compose.yml`** + **kop
 
 ## Lokalizacja i rozmiar backupu
 
-Backupy lądują w `/Users/p/Documents/dev/n8n-backups/` — obok innych projektów w `dev/`, ale **poza** jakimkolwiek repozytorium git (folder jest rodzeństwem projektów, nie leży w żadnym z nich; nie rób w nim `git init`). Każdy backup dostaje **własny podfolder z datą**, a w nim trzy pliki:
+Backupy lądują na **Google Drive**: `/Users/p/Mój dysk /Colab Notebooks/n8n-backups/` (folder `Mój dysk ` ma spację na końcu — stąd cudzysłowy w komendach). Każdy backup dostaje **własny podfolder z datą**, a w nim trzy pliki:
 
 ```
-/Users/p/Documents/dev/n8n-backups/
+/Users/p/Mój dysk /Colab Notebooks/n8n-backups/
 └── 2026-07-18/
     ├── n8n_data.tar.gz       # cały wolumen spakowany — dane + klucz (~0,7 MB)
     ├── docker-compose.yml    # przepis (< 1 KB)
     └── n8n.env.backup        # kopia kluczy (< 1 KB)
 ```
 
-Podfolder-per-data trzyma każdy snapshot samodzielnie: `docker-compose.yml` i `.env` mogą się z czasem zmieniać, więc ich kopia musi pasować do tara z tego samego dnia (płaski katalog by je nadpisywał).
+Podfolder-per-data trzyma każdy snapshot samodzielnie: `docker-compose.yml` i `.env` mogą się z czasem zmieniać, więc ich kopia musi pasować do tara z tego samego dnia.
 
-Wolumen surowo waży ~7,5 MB (głównie `database.sqlite` + jego dziennik zapisu `-wal`), po kompresji `tar.gz` to ~0,7 MB. Każdy miesięczny backup dokłada jeden **datowany** `.tar.gz` — po roku rząd kilku–kilkunastu MB, pomijalne. Rozmiar rośnie z liczbą workflow i historią wykonań, ale długo pozostanie w MB, nie GB.
+**Dlaczego Drive:** synchronizuje się do chmury, więc kopia jest automatycznie **poza maszyną** — ręczny krok „skopiuj na dysk zewnętrzny" znika, a awaria dysku Maca nie kasuje backupu.
 
-To też wyjaśnia, czemu runbook każe zatrzymać kontener przed backupem: przy działającym n8n część świeżych danych siedzi w tymczasowym dzienniku `-wal`; `stop` scala go do głównej bazy i daje spójny (i mniejszy) snapshot.
+**Dwie pułapki tej lokalizacji:**
+- Docker **nie montuje niezawodnie** ścieżki Drive (to wirtualny FS przez `~/Library/CloudStorage`). Dlatego tarujemy do **lokalnego stagingu**, a na Drive kopiujemy zwykłym `cp` (kroki niżej).
+- Snapshot to **sekrety w chmurze** (klucz szyfrujący + zaszyfrowane credentiale + `.env`). Akceptowalne na prywatnym koncie Google z 2FA; treści medycznych tu nie ma (te żyją lokalnie w `data/`). Świadoma decyzja właściciela.
+
+Wolumen surowo waży ~7,5 MB (głównie `database.sqlite` + dziennik `-wal`), po kompresji `tar.gz` to ~0,7 MB. Miesięczny backup dokłada jeden datowany `.tar.gz` — po roku rząd kilku–kilkunastu MB. `stop` przed backupem scala `-wal` do głównej bazy → spójny (i mniejszy) snapshot.
 
 ## Backup — krok po kroku
 
-Katalog n8n: `/Users/p/Documents/dev/n8n/`. Baza backupów: `/Users/p/Documents/dev/n8n-backups/`. Kroki 1–4 wykonuj w **jednej sesji terminala** (albo jednym blokiem), żeby zmienna `$BACKUP_DIR` przetrwała.
+Katalog n8n: `/Users/p/Documents/dev/n8n/`. Cel na Drive: `/Users/p/Mój dysk /Colab Notebooks/n8n-backups/`. Wykonuj w **jednej sesji terminala** (żeby zmienne przetrwały). Tarujemy lokalnie, potem kopiujemy na Drive (Docker nie montuje ścieżki Drive).
 
-1. Ustal podfolder z dzisiejszą datą i zatrzymaj kontener (dla spójności SQLite):
+1. Ustal ścieżki (staging lokalny + cel z datą na Drive) i zatrzymaj kontener:
    ```bash
-   BACKUP_DIR="/Users/p/Documents/dev/n8n-backups/$(date +%F)"
-   mkdir -p "$BACKUP_DIR"
+   STAGING="$HOME/.n8n-backup-staging"
+   DEST="/Users/p/Mój dysk /Colab Notebooks/n8n-backups/$(date +%F)"
+   mkdir -p "$STAGING" "$DEST"
    docker compose -f /Users/p/Documents/dev/n8n/docker-compose.yml stop
    ```
-   Przy niskim ruchu tar żywego wolumenu też działa, ale `stop` daje czysty snapshot bazy.
-2. Zrzut wolumenu (dane):
+2. Zrzut wolumenu do stagingu (Docker pisze do lokalnej ścieżki):
    ```bash
-   docker run --rm -v n8n_data:/data:ro -v "$BACKUP_DIR":/backup alpine \
+   docker run --rm -v n8n_data:/data:ro -v "$STAGING":/backup alpine \
      tar czf /backup/n8n_data.tar.gz -C /data .
    ```
-3. Skopiuj przepis i sekrety do tego samego podfolderu:
-   ```bash
-   cp /Users/p/Documents/dev/n8n/docker-compose.yml "$BACKUP_DIR"/
-   cp /Users/p/Documents/dev/n8n/.env "$BACKUP_DIR"/n8n.env.backup
-   ```
-4. Wznów kontener:
+3. Wznów kontener (dalej pracujemy już na plikach, n8n może wrócić online):
    ```bash
    docker compose -f /Users/p/Documents/dev/n8n/docker-compose.yml start
    ```
-5. Weryfikacja: `ls -lh "$BACKUP_DIR"` — `n8n_data.tar.gz` > 0 B, obecne `docker-compose.yml` i `n8n.env.backup`.
-6. **Skopiuj podfolder poza maszynę** (dysk zewnętrzny / szyfrowana chmura). Tar na tym samym dysku nie chroni przed awarią dysku — to jest właśnie krok „na wypadek awarii".
+4. Skopiuj trzy pliki na Drive i posprzątaj staging:
+   ```bash
+   cp "$STAGING/n8n_data.tar.gz" "$DEST/"
+   cp /Users/p/Documents/dev/n8n/docker-compose.yml "$DEST/"
+   cp /Users/p/Documents/dev/n8n/.env "$DEST/n8n.env.backup"
+   rm "$STAGING/n8n_data.tar.gz"
+   ```
+5. Weryfikacja: `ls -lh "$DEST"` — `n8n_data.tar.gz` > 0 B, obecne `docker-compose.yml` i `n8n.env.backup`. Drive zsynchronizuje pliki do chmury (ikona sync w Finderze).
 
 Kadencja: raz na miesiąc (lub przed każdą większą zmianą / upgradem n8n).
 
 ## Odtworzenie na nowym MacBooku — krok po kroku
 
 1. Zainstaluj Docker Desktop.
-2. Odłóż pliki backupu na nowej maszynie (np. `~/Documents/dev/n8n/`): `docker-compose.yml`, `n8n.env.backup` → zapisz jako `.env`, oraz `n8n_data_RRRR-MM-DD.tar.gz`.
+2. Pobierz podfolder backupu z Google Drive (`.../Colab Notebooks/n8n-backups/RRRR-MM-DD/`) i odłóż jego pliki na nowej maszynie: `docker-compose.yml`, `n8n.env.backup` → zapisz jako `.env`, oraz `n8n_data.tar.gz`.
 3. Utwórz wolumen (jest `external` — compose go nie stworzy):
    ```bash
    docker volume create n8n_data
@@ -110,7 +115,7 @@ To repo daje **przepis** (compose), nie dane ani sekrety. Do pełnego odtworzeni
 
 Gdy właściciel powie „zrób backup n8n":
 
-1. Wykonaj sekcję **Backup — krok po kroku** w **jednej sesji terminala / jednym bloku** (żeby `$BACKUP_DIR` przetrwał): podfolder z datą w `/Users/p/Documents/dev/n8n-backups/`, stop → tar `n8n_data` → kopia `docker-compose.yml` + `.env` do tego podfolderu → start.
+1. Wykonaj sekcję **Backup — krok po kroku** w **jednej sesji terminala** (żeby zmienne `$STAGING`/`$DEST` przetrwały): tar `n8n_data` do lokalnego stagingu → start kontenera → `cp` trzech plików do podfolderu z datą na Drive (`/Users/p/Mój dysk /Colab Notebooks/n8n-backups/`).
 2. Zweryfikuj rozmiar tara (> 0 B) i obecność wszystkich trzech elementów snapshotu.
-3. Przypomnij właścicielowi, żeby skopiował snapshot **poza maszynę** — sam tar na tym samym dysku nie chroni przed awarią dysku.
+3. Potwierdź, że Drive zsynchronizował pliki do chmury — off-machine backup jest wtedy automatyczny, osobne kopiowanie zbędne.
 4. **Nigdy** nie commituj tara ani `.env` do żadnego repozytorium; nie wypisuj wartości kluczy do czatu.

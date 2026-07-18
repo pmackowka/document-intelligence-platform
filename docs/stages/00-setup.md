@@ -9,8 +9,8 @@ Działające fundamenty: repozytorium git, środowisko Python, lokalny n8n, smok
 - [x] Środowisko Python (uv) — uv 0.11.29 (brew), Python 3.11.4, `uv sync` → `.venv/` + `uv.lock`, weryfikacja `uv run python` OK
 - [x] `data/` w `.gitignore` — dokumenty medyczne nigdy nie trafiają do repo
 - [x] n8n uruchomiony lokalnie (Docker Compose, v2.27.4) + dostęp Claude Code przez serwer MCP (scope local w `~/.claude.json`)
-- [ ] Pierwszy testowy workflow n8n (przez narzędzia n8n MCP — wymaga restartu sesji, by narzędzia się załadowały)
-- [ ] Smoke test: wywołanie `claude -p "..."` z Pythona (subprocess), w tym `--model haiku`
+- [x] Pierwszy testowy workflow n8n (przez narzędzia n8n MCP) — `008 — Document Intelligence: pierwszy workflow testowy (MCP smoke test)`, Manual Trigger → Edit Fields; zbudowany, zwalidowany i uruchomiony (execution `success`)
+- [x] Smoke test: wywołanie `claude -p "..."` z Pythona (subprocess), w tym `--model haiku` — `src/smoke_test_claude.py`, oba wywołania OK (model domyślny → `4`, Haiku → `cztery`)
 - [ ] (osobno, po MCP) upgrade n8n z 2.27.4 do najnowszej — `docker compose pull && up -d`, re-test endpointu MCP
 
 ## Notatki
@@ -69,6 +69,59 @@ Dane trwałe: wolumen Docker `n8n_data` (`external: true`), zamontowany na `/hom
 **Jak działa:** MCP typu `http`, endpoint `http://localhost:5678/mcp-server/http`, autoryzacja nagłówkiem `Bearer <JWT>`. Serwer („n8n MCP Server" v1.1.0) wystawia `tools` + `resources` do budowania workflow przez n8n Workflow SDK. Dodanie: `claude mcp add n8n-mcp --scope local --transport http <url> --header "Authorization: Bearer <token>"`. Serwery MCP ładują się przy starcie sesji — po dodaniu potrzebny restart, by narzędzia `mcp__n8n-mcp__*` były dostępne.
 
 **Pułapki:** token to sekret — konfiguracja trafia do `~/.claude.json` (poza repo), **nigdy** do `.mcp.json` w repo (byłby JWT w gicie, sprzeczne z „zero sekretów"). Weryfikacja połączenia: `claude mcp list` → status Connected.
+
+### Budowa workflow przez serwer MCP n8n
+
+**Decyzja:** workflow budowany kodem SDK (`@n8n/workflow-sdk`), nie klikaniem w UI ani surowym JSON-em wysyłanym do REST API.
+
+**Dlaczego:** serwer MCP wymusza ścieżkę „napisz kod → zwaliduj → utwórz", więc workflow powstaje deterministycznie i wersjonowalnie z opisu, a nie ręcznym układaniem węzłów. To ten sam model pracy, który docelowo obsłuży orkiestrację pipeline'u (n8n woła Python/`claude -p`).
+
+**Jak działa:** obowiązkowa kolejność narzędzi MCP — `get_sdk_reference` (składnia SDK) → `get_workflow_best_practices` (wzorce dla techniki) → `search_nodes` (znalezienie węzłów + dyskryminatory resource/operation/mode) → `get_node_types` (dokładne nazwy parametrów) → `validate_workflow` → `create_workflow_from_code`. Pominięcie `get_node_types` = zgadywanie parametrów = niepoprawny workflow. Kod to `workflow(id, name).add(trigger).to(node)`; węzły definiowane osobno, każdy z przykładowym `output` (kolejne węzły budują na nim wyrażenia). Utworzony workflow wpada domyślnie do projektu osobistego; egzekucję testową sprawdza się `execute_workflow` (mode `manual`) → `get_execution` (status `success` + dane węzła).
+
+**Pułapki:** numer prefiksu to sekwencja unikatowa — `007` był już zajęty (workflow ClickUp), więc „kolejny" = `008`, nie `007`; przed utworzeniem trzeba sprawdzić `search_workflows`, bo dwa razy ten sam prefiks to cichy duplikat. Wyrażenia zawsze w `expr('{{ ... }}')` z cudzysłowami prostymi, nigdy w backtickach ani ze zmiennymi poza `{{ }}`.
+
+### Podział odpowiedzialności: Python vs. n8n
+
+**Decyzja:** cała logika biznesowa (OCR, standaryzacja, anonimizacja, ekstrakcja) w wersjonowanych plikach `.py`; n8n wyłącznie orkiestruje — trigger, kolejność, retry. Node n8n nigdy nie trzyma logiki.
+
+**Dlaczego:**
+
+- **Git** — kod w plikach jest wersjonowany i review'owalny; logika w node'ach żyje w SQLite w wolumenie Dockera, poza gitem.
+- **Testy** — funkcje Pythona mają unit testy i debugger; snippet w polu node'a nie ma nic.
+- **Biblioteki** — Docling / Presidio / spaCy `pl_core_news_lg` wymagają natywnego venv (uv); sandbox runnera n8n ich nie uniesie.
+- **Brak lock-in** — logika przeżyje zmianę orkiestratora (n8n → Airflow/cron); w node'ach byłaby uwięziona.
+- **Prywatność** — twardą regułę „nic do API przed Presidio" audytujesz w jednym miejscu w kodzie, nie po rozproszonych node'ach.
+
+**Pułapka:** reguła „zero logiki w n8n" jest odrobinę surowsza niż konieczne (drobny routing dałoby się w n8n) — świadomie, jako bariera przed *logic creep*: w n8n logika lubi rozłazić się po node'ach, aż nikt nie wie, gdzie co jest. To kanoniczny wzorzec: orkiestrator cienki, ciężka praca w wersjonowanym kodzie (tak samo Airflow: DAG wiąże taski, task woła kod).
+
+### Tryb headless `claude -p` i model kosztowy (Pro vs. tokeny API)
+
+**Decyzja:** wywołania LLM w pipeline idą przez `claude -p "<prompt>"` uruchamiane jako subprocess z Pythona, na zalogowanej subskrypcji **Pro** — nigdy przez SDK Anthropic z kluczem API rozliczanym per token. Smoke test (`src/smoke_test_claude.py`) potwierdza tę ścieżkę dla modelu domyślnego i dla `--model haiku`.
+
+**Jak działa (tryb headless):** `claude -p` (od *print*) to Claude Code bez interaktywnego TTY — bierze prompt, wykonuje zadanie i wypisuje samą odpowiedź na stdout, po czym kończy proces. To czyni go wywoływalnym jak każdy program CLI:
+
+```python
+subprocess.run(["claude", "-p", "Wyekstrahuj ustalenia z: ...", "--model", "haiku"],
+               capture_output=True, text=True, check=True).stdout
+```
+
+Uwierzytelnia się zalogowaną sesją Pro (keychain / `~/.claude`), nie kluczem API — dlatego działa też jako proces zagnieżdżony (odpalony z wnętrza tej sesji Claude Code). n8n woła to samo jako komenda shell → zero logiki w n8n, cała inteligencja w jednym mechanizmie.
+
+**Dlaczego (koszt — ze sprostowaniem założenia):** Pro to koszt stały (~20 USD/mies., ~17 przy rocznym); API to koszt zmienny per token. Ale wbrew intuicji samo przetworzenie 390 dokumentów przez API byłoby **tanie**, nie drogie. Szacunek jednego pełnego przebiegu (założenia: ~273 dok. narracyjnych × ~2 000 tok wejścia + ~500 tok wyjścia na dokument; ~117 strukturalnych to garść weryfikacji aliasów na Haiku ≈ +0,35 USD):
+
+| Model ekstrakcji narracyjnej | Cennik (wej./wyj. za 1 MTok) | Koszt 1 przebiegu 390 dok. |
+| --- | --- | --- |
+| Haiku 4.5 | $1 / $5 | ~1,6 USD |
+| Sonnet 5 | $3 / $15 (intro $2/$10 do 2026-08-31) | ~4 USD (~2,5 USD w promo) |
+| Opus 4.8 | $5 / $25 | ~6,5 USD |
+
+Jednorazowa obróbka archiwum to kilka dolarów — API by tu nie zrujnowało budżetu. Realną przewagę Pro robią dwie inne rzeczy:
+
+1. **Iteracja:** pipeline nie odpala się raz. Dziesiątki przebiegów przy strojeniu ekstrakcji i walidacji na przykładach → koszt × N.
+
+2. **Agentic coding:** budowa pipeline'u w Claude Code (jak ta sesja) to miliony tokenów na sesję przy dużym kontekście i wielu tool-callach. Przy Opus $5/$25 kilka intensywnych dni programowania szybko przebija roczny koszt Pro. To tu metrowanie tokenów eksploduje, a płaska subskrypcja spłaszcza koszt do przewidywalnej kwoty.
+
+**Pułapki:** Pro ma limity przepustowości (okna 5-godzinne + tygodniowe), API nie — 390 dokumentów w jednym zrywie mogłoby uderzyć w limit Pro; przy human-in-the-loop (partie zatwierdzane ręcznie) to nieistotne, ale masowy backfill trzeba rozłożyć w czasie. Druga: `claude -p` niesie narzut własnego promptu systemowego Claude Code, więc realne zużycie tokenów na wywołanie jest wyższe niż sam prompt + dokument (bez znaczenia przy Pro, istotne gdyby ktoś liczył wariant API).
 
 ### Dokumentacja i konwencje projektu
 

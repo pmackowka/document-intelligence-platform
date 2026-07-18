@@ -12,6 +12,7 @@ Działające fundamenty: repozytorium git, środowisko Python, lokalny n8n, smok
 - [x] Pierwszy testowy workflow n8n (przez narzędzia n8n MCP) — `008 — Document Intelligence: pierwszy workflow testowy (MCP smoke test)`, Manual Trigger → Edit Fields; zbudowany, zwalidowany i uruchomiony (execution `success`)
 - [x] Smoke test: wywołanie `claude -p "..."` z Pythona (subprocess), w tym `--model haiku` — `src/smoke_test_claude.py`, oba wywołania OK (model domyślny → `4`, Haiku → `cztery`)
 - [x] (osobno, po MCP) upgrade n8n z 2.27.4 do najnowszej (2.30.7) — `docker compose pull && up -d`; migracje bazy czyste, klucz szyfrujący OK, 9 workflow całych, endpoint MCP ponownie Connected
+- [x] Backup środowiska n8n — procedura w `docs/n8n-backup-restore.md`; pierwszy backup wykonany i zweryfikowany (tar wolumenu + compose + `.env` w `/Users/p/Documents/dev/n8n-backups/`, restart n8n czysty, healthz 200)
 
 ## Notatki
 

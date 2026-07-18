@@ -22,10 +22,10 @@ Snapshot pełny = **tar wolumenu `n8n_data`** + **`docker-compose.yml`** + **kop
 
 ## Lokalizacja i rozmiar backupu
 
-Backupy lądują na **Google Drive**: `/Users/p/Mój dysk /Colab Notebooks/n8n-backups/` (folder `Mój dysk ` ma spację na końcu — stąd cudzysłowy w komendach). Każdy backup dostaje **własny podfolder z datą**, a w nim trzy pliki:
+Backupy lądują na **Google Drive**: `/Users/p/Mój dysk/Colab Notebooks/n8n-backups/` (ścieżka ma spacje w środku — `Mój dysk`, `Colab Notebooks` — więc w komendach zawsze w cudzysłowach). Każdy backup dostaje **własny podfolder z datą**, a w nim trzy pliki:
 
 ```
-/Users/p/Mój dysk /Colab Notebooks/n8n-backups/
+/Users/p/Mój dysk/Colab Notebooks/n8n-backups/
 └── 2026-07-18/
     ├── n8n_data.tar.gz       # cały wolumen spakowany — dane + klucz (~0,7 MB)
     ├── docker-compose.yml    # przepis (< 1 KB)
@@ -44,12 +44,12 @@ Wolumen surowo waży ~7,5 MB (głównie `database.sqlite` + dziennik `-wal`), po
 
 ## Backup — krok po kroku
 
-Katalog n8n: `/Users/p/Documents/dev/n8n/`. Cel na Drive: `/Users/p/Mój dysk /Colab Notebooks/n8n-backups/`. Wykonuj w **jednej sesji terminala** (żeby zmienne przetrwały). Tarujemy lokalnie, potem kopiujemy na Drive (Docker nie montuje ścieżki Drive).
+Katalog n8n: `/Users/p/Documents/dev/n8n/`. Cel na Drive: `/Users/p/Mój dysk/Colab Notebooks/n8n-backups/`. Wykonuj w **jednej sesji terminala** (żeby zmienne przetrwały). Tarujemy lokalnie, potem kopiujemy na Drive (Docker nie montuje ścieżki Drive).
 
 1. Ustal ścieżki (staging lokalny + cel z datą na Drive) i zatrzymaj kontener:
    ```bash
    STAGING="$HOME/.n8n-backup-staging"
-   DEST="/Users/p/Mój dysk /Colab Notebooks/n8n-backups/$(date +%F)"
+   DEST="/Users/p/Mój dysk/Colab Notebooks/n8n-backups/$(date +%F)"
    mkdir -p "$STAGING" "$DEST"
    docker compose -f /Users/p/Documents/dev/n8n/docker-compose.yml stop
    ```
@@ -115,7 +115,7 @@ To repo daje **przepis** (compose), nie dane ani sekrety. Do pełnego odtworzeni
 
 Gdy właściciel powie „zrób backup n8n":
 
-1. Wykonaj sekcję **Backup — krok po kroku** w **jednej sesji terminala** (żeby zmienne `$STAGING`/`$DEST` przetrwały): tar `n8n_data` do lokalnego stagingu → start kontenera → `cp` trzech plików do podfolderu z datą na Drive (`/Users/p/Mój dysk /Colab Notebooks/n8n-backups/`).
+1. Wykonaj sekcję **Backup — krok po kroku** w **jednej sesji terminala** (żeby zmienne `$STAGING`/`$DEST` przetrwały): tar `n8n_data` do lokalnego stagingu → start kontenera → `cp` trzech plików do podfolderu z datą na Drive (`/Users/p/Mój dysk/Colab Notebooks/n8n-backups/`).
 2. Zweryfikuj rozmiar tara (> 0 B) i obecność wszystkich trzech elementów snapshotu.
 3. Potwierdź, że Drive zsynchronizował pliki do chmury — off-machine backup jest wtedy automatyczny, osobne kopiowanie zbędne.
 4. **Nigdy** nie commituj tara ani `.env` do żadnego repozytorium; nie wypisuj wartości kluczy do czatu.

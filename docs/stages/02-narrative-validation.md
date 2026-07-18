@@ -14,12 +14,17 @@ Sprawdzić na 5–10 opisach (USG, MRI, kolonoskopia), czy ekstrakcja ustaleń p
 Ręcznie, bo Presidio jeszcze nie istnieje, a reguła twarda z PRD obejmuje też sesję Claude Code (to też API Anthropic). PII w polskich opisach siedzi w nagłówku/stopce: pacjent (nazwisko → `PERSON_001`, PESEL → `PESEL_001`, data urodzenia → `DOB_001`, adres → `ADDRESS_001`), lekarz + PWZ → `DOCTOR_001`, placówka/nr badania → `FACILITY_001`/`EXAM_ID_001`. **Zostaje**: data badania (oś czasu) i cała treść medyczna. ~3–5 min/dokument.
 
 ## Notatki
-<!-- Grupuj po temacie, nie po dacie (chronologię trzyma git). Dla każdego tematu:
+<!-- Grupuj po temacie, nie po dacie (chronologię trzyma git). Każdy podpunkt
+     w OSOBNYM akapicie (pusta linia między nimi). Dla każdego tematu:
 
 ### <Temat / czego dotyczy>
+
 **Decyzja:** co ustalono.
+
 **Dlaczego:** uzasadnienie, trade-offy.
+
 **Jak działa:** mechanizm narzędzia pod spodem — sedno nauki.
+
 **Pułapki:** co zaskoczyło, na co uważać.
 
 Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, nie log czynności. -->

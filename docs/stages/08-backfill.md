@@ -14,12 +14,17 @@ Przetworzenie historycznych ~250 plików (pierwsza partia z ~390) i pomiar S1–
 <!-- uzupełniane po backfillu -->
 
 ## Notatki
-<!-- Grupuj po temacie, nie po dacie (chronologię trzyma git). Dla każdego tematu:
+<!-- Grupuj po temacie, nie po dacie (chronologię trzyma git). Każdy podpunkt
+     w OSOBNYM akapicie (pusta linia między nimi). Dla każdego tematu:
 
 ### <Temat / czego dotyczy>
+
 **Decyzja:** co ustalono.
+
 **Dlaczego:** uzasadnienie, trade-offy.
+
 **Jak działa:** mechanizm narzędzia pod spodem — sedno nauki.
+
 **Pułapki:** co zaskoczyło, na co uważać.
 
 Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, nie log czynności. -->

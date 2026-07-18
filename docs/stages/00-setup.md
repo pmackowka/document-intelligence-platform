@@ -8,8 +8,10 @@ Działające fundamenty: repozytorium git, środowisko Python, lokalny n8n, smok
 - [x] Struktura projektu (`config/`, `src/`, `data/{raw,pending,store,reports}`) — 2026-07-17; drzewo i reguła prywatności ścieżek w CLAUDE.md
 - [x] Środowisko Python (uv) — 2026-07-18; uv 0.11.29 (brew), Python 3.11.4, `uv sync` → `.venv/` + `uv.lock`, weryfikacja `uv run python` OK
 - [x] `data/` w `.gitignore` — dokumenty medyczne nigdy nie trafiają do repo — 2026-07-17, commit `2e5e144`; konwencja rozszerzona w `2b1d527`
-- [ ] n8n uruchomiony lokalnie, pierwszy testowy workflow
+- [x] n8n uruchomiony lokalnie (Docker Compose, v2.27.4) + dostęp Claude Code przez serwer MCP — 2026-07-18, scope local w `~/.claude.json`
+- [ ] Pierwszy testowy workflow n8n (przez narzędzia n8n MCP — wymaga restartu sesji, by narzędzia się załadowały)
 - [ ] Smoke test: wywołanie `claude -p "..."` z Pythona (subprocess), w tym `--model haiku`
+- [ ] (osobno, po MCP) upgrade n8n z 2.27.4 do najnowszej — `docker compose pull && up -d`, re-test endpointu MCP
 
 ## Notatki
 
@@ -29,6 +31,12 @@ Działające fundamenty: repozytorium git, środowisko Python, lokalny n8n, smok
 **Dlaczego:** jedno narzędzie (środowisko, zależności, lockfile, wersja Pythona), znacznie szybsze przy ciężkim stacku; `uv.lock` w repo → reprodukowalne środowisko z klona jedną komendą. Homebrew: aktualizacje przez `brew upgrade` razem z resztą narzędzi. Etap 0 stawia tylko fundament (reguła „bez stubów na zapas").
 **Jak działa:** `uv sync` czyta `pyproject.toml`, tworzy `.venv/` i zapisuje dokładne wersje do `uv.lock`. `uv run <komenda>` sam aktywuje `.venv` — bez ręcznego `source .venv/bin/activate` jak przy klasycznym `venv`.
 **Pułapki:** `.venv/` jest w `.gitignore` (odtwarzalne z locka, duże) — do repo idą `pyproject.toml` + `uv.lock`, nie samo środowisko.
+
+### Dostęp Claude Code do n8n (serwer MCP)
+**Decyzja:** dostęp przez **wbudowany serwer MCP n8n** (nie zewnętrzny proces npx), zasięg **local** (per projekt), token reuse z projektu Learning-Plan.
+**Dlaczego:** local zamiast global, bo to serwer HTTP — global oznaczałby próbę połączenia z `localhost:5678` w każdej sesji każdego projektu (szum, gdy n8n nie działa). Reuse tokenu: zweryfikowany, localhost, niskie ryzyko — dedykowany token dla niezależnego unieważniania opcjonalnie później.
+**Jak działa:** MCP typu `http`, endpoint `http://localhost:5678/mcp-server/http`, autoryzacja nagłówkiem `Bearer <JWT>`. Serwer („n8n MCP Server" v1.1.0) wystawia `tools` + `resources` do budowania workflow przez n8n Workflow SDK. Dodanie: `claude mcp add n8n-mcp --scope local --transport http <url> --header "Authorization: Bearer <token>"`. Serwery MCP ładują się przy starcie sesji — po dodaniu potrzebny restart, by narzędzia `mcp__n8n-mcp__*` były dostępne.
+**Pułapki:** token to sekret — konfiguracja trafia do `~/.claude.json` (poza repo), **nigdy** do `.mcp.json` w repo (byłby JWT w gicie, sprzeczne z „zero sekretów"). Weryfikacja połączenia: `claude mcp list` → status Connected.
 
 ### Dokumentacja i konwencje projektu
 **Decyzja:** reguły przekrojowe (workflow etapów, Mermaid, ścieżki) w CLAUDE.md, szczegóły w docs.

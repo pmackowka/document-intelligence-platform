@@ -9,11 +9,14 @@ Pełny moduł dla 70% wolumenu: OCR → Presidio → ekstrakcja LLM → zatwierd
 - [ ] Anonimizowany Markdown opisu zapisywany obok rekordów (kontekst do przyszłych analiz)
 - [ ] Przetworzone end-to-end ≥10 realnych dokumentów narracyjnych różnych typów (USG, MRI, TK)
 
-## Decyzje i dlaczego
-<!-- uzupełniane w trakcie pracy -->
+## Notatki
+<!-- Grupuj po temacie, nie po dacie (chronologię trzyma git). Dla każdego tematu:
 
-## Jak to działa (mechanizmy narzędzi)
-<!-- uzupełniane w trakcie pracy -->
+### <Temat / czego dotyczy>
+**Decyzja:** co ustalono.
+**Dlaczego:** uzasadnienie, trade-offy.
+**Jak działa:** mechanizm narzędzia pod spodem — sedno nauki.
+**Pułapki:** co zaskoczyło, na co uważać.
 
-## Gotchas / lekcje
-<!-- uzupełniane w trakcie pracy -->
+Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, nie log czynności. -->
+

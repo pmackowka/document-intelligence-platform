@@ -11,11 +11,14 @@ Warstwa pseudonimizacji przed jakimkolwiek wysłaniem tekstu dokumentu do API. C
 - [ ] Pomiar recall na złotym zbiorze z etapu 2 (ręcznie zanonimizowana próbka = ground truth: porównaj wykrycia Presidio z listą ręcznych podmian)
 - [ ] Jeśli adresy/nazwiska wykrywane słabo → custom recognizer lub deny-lista
 
-## Decyzje i dlaczego
-<!-- uzupełniane w trakcie pracy -->
+## Notatki
+<!-- Grupuj po temacie, nie po dacie (chronologię trzyma git). Dla każdego tematu:
 
-## Jak to działa (mechanizmy narzędzi)
-<!-- uzupełniane w trakcie pracy -->
+### <Temat / czego dotyczy>
+**Decyzja:** co ustalono.
+**Dlaczego:** uzasadnienie, trade-offy.
+**Jak działa:** mechanizm narzędzia pod spodem — sedno nauki.
+**Pułapki:** co zaskoczyło, na co uważać.
 
-## Gotchas / lekcje
-<!-- uzupełniane w trakcie pracy -->
+Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, nie log czynności. -->
+

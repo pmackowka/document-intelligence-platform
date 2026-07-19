@@ -7,4 +7,5 @@ requires-python = ">=3.11"
 dependencies = [
     "docling>=2.113.0",
     "ocrmac>=1.0.1",
+    "pyyaml>=6.0.3",
 ]

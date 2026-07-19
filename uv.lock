@@ -483,12 +483,14 @@ source = { virtual = "." }
 dependencies = [
     { name = "docling" },
     { name = "ocrmac" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "docling", specifier = ">=2.113.0" },
     { name = "ocrmac", specifier = ">=1.0.1" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
 ]
 
 [[package]]

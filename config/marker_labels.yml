@@ -1,0 +1,39 @@
+# Etykiety do RAPORTÓW dla człowieka (data/reports/) — generowane w etapie 6.
+# Kanoniczny kod markera (klucz łączenia trendów) -> czytelna polska nazwa.
+#
+# Po co rozdział: kod (WBC) jest wewnętrzny i stały — agreguje ten sam parametr
+# niezależnie od nazwy w źródle. Lekarz w raporcie widzi nazwę stąd, nie kod.
+# MCV/MCH/MCHC/RDW/MPV/PDW zostają skrótami — tak są na każdej morfologii, lekarze je znają.
+labels:
+  WBC: "Leukocyty"
+  RBC: "Erytrocyty"
+  HGB: "Hemoglobina"
+  HCT: "Hematokryt"
+  MCV: "MCV"
+  MCH: "MCH"
+  MCHC: "MCHC"
+  RDW_CV: "RDW-CV"
+  PLT: "Płytki krwi"
+  PDW: "PDW"
+  MPV: "MPV"
+  P_LCR: "P-LCR"
+  NEU: "Neutrofile"
+  LYM: "Limfocyty"
+  MONO: "Monocyty"
+  EOS: "Eozynofile"
+  BASO: "Bazofile"
+  urine_clarity: "Przejrzystość"
+  urine_color: "Barwa"
+  urine_specific_gravity: "Ciężar właściwy"
+  urine_ph: "pH"
+  urine_glucose: "Glukoza"
+  urine_ketones: "Ketony"
+  urine_urobilinogen: "Urobilinogen"
+  urine_bilirubin: "Bilirubina"
+  urine_protein: "Białko"
+  urine_leukocytes: "Leukocyty"
+  urine_blood: "Krew"
+  urine_nitrites: "Azotyny"
+  anti_HCV: "Przeciwciała anty-HCV"
+  HBsAg: "Antygen HBs"
+  FOB: "Krew utajona w kale"

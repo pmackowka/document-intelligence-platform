@@ -1,9 +1,11 @@
 # PRD: Document Intelligence Platform — Version 1
 
-> Status: **v1.1 — zatwierdzony** (v1.0: 2026-07-17, po sesji sokratejskiej i 2 rundach review). Wszystkie decyzje produktowe zamknięte.
+> Status: **v1.2 — zatwierdzony** (v1.0: 2026-07-17, po sesji sokratejskiej i 2 rundach review). Wszystkie decyzje produktowe zamknięte.
 > Kontrakt dla wszystkich sesji z agentem. Każda zmiana zakresu = aktualizacja tego pliku + commit.
 >
 > **v1.1 (2026-07-18):** (1) ingest tylko ręczny upload przez n8n — usunięty konektor Google Drive; (2) klasyfikacja dokumentu = ręczna etykieta operatora przy uploadzie (human-in-the-loop), a nie klasyfikator automatyczny.
+>
+> **v1.2 (2026-07-19):** schemat narracyjny doprecyzowany po walidacji etapu 2 (Scope pkt 5): `status` = `prawidłowy`/`nieprawidłowy`/`nieobecny`; pojedynczy pomiar → lista `measurements`; jednostki normalizowane też w narracji; dedup rekordów po badaniu.
 
 ---
 
@@ -53,7 +55,9 @@ Progi zatwierdzone przez właściciela (runda review 1):
    - normalizacja jednostek (`units.yml`) i zakresów referencyjnych do `reference_low`/`reference_high`.
 5. **Pipeline narracyjny — ekstrakcja ustaleń (LLM-based, best-effort):**
    - **uwaga na proporcje: ~70% backfillu to dokumenty narracyjne** — ten pipeline obsługuje większość danych i dostaje odpowiedni priorytet wysiłku,
-   - frontier model ekstrahuje do schematu: `finding`, `location`, `measurement_value`, `measurement_unit`, `status`, `exam_type`, `exam_date` — **wyłącznie na tekście po anonimizacji Presidio**,
+   - frontier model ekstrahuje do schematu (**v1.2, doprecyzowany po walidacji etapu 2**): `finding`, `location`, `measurements` (lista `{value, unit, label}` — obsługuje pomiary wielowymiarowe, np. 22×23×37 mm + objętość), `status` (`prawidłowy` | `nieprawidłowy` | `nieobecny` = norma / patologia obecna / wykluczone), `exam_type`, `exam_date` — **wyłącznie na tekście po anonimizacji Presidio**,
+   - **normalizacja jednostek również w narracji**: `units.yml` + domyślne domenowe dla jednostek dorozumianych (np. wymiary echo → mm),
+   - **dedup po badaniu**: jedno badanie bywa w kilku plikach (opis + karta wizyty + histopatologia) — rekordy grupowane/deduplikowane po (`exam_type`, `exam_date`); operator rozstrzyga w pętli,
    - **operator zatwierdza każdy rekord** przed zapisem (human-in-the-loop obowiązkowy — model będzie pomijał i nadinterpretował),
    - pełny anonimizowany Markdown opisu zapisywany obok rekordów jako kontekst.
 6. **Anonimizacja (Presidio):** nazwiska, adresy, telefony, PESEL, e-mail → pseudonimy. **Reguła twarda:** żaden tekst dokumentu nie trafia do zewnętrznego API przed Presidio; jedyny wyjątek to weryfikacja aliasów (sama nazwa markera, bez PII).

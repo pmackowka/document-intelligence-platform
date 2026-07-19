@@ -20,12 +20,9 @@ import sys
 from pathlib import Path
 
 import yaml
-from PIL import Image
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import OcrMacOptions, PdfPipelineOptions
-from docling.document_converter import DocumentConverter, ImageFormatOption, PdfFormatOption
 
-Image.MAX_IMAGE_PIXELS = None  # własne pliki — wyłącz strażnik decompression-bomb (duże skany)
+from ocr import ocr_markdown as _ocr_markdown
+from ocr import DOC_EXTS
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config"
@@ -33,7 +30,6 @@ RAW = ROOT / "data" / "raw" / "structural"
 OCR_CACHE = ROOT / "data" / "interim" / "structural-ocr"
 STORE = ROOT / "data" / "store"
 PENDING = ROOT / "data" / "pending"
-DOC_EXTS = {".pdf", ".png", ".jpg", ".jpeg", ".heic", ".tif", ".tiff"}
 
 # --- normalizacja klucza: lowercase, bez polskich diakrytyków, bez gwiazdek, spacje zwarte ---
 _DIACR = str.maketrans("ąćęłńóśźż", "acelnoszz")
@@ -311,33 +307,9 @@ def propose_alias_haiku(panel: str, name_raw: str) -> str:
     return sanitize_alias(out)
 
 
-_CONV = None
-
-
-def _ocr_converter() -> DocumentConverter:
-    """Apple Vision (pl-PL), wymuszony pełny OCR — decyzja z etapu 1 (zepsuta warstwa tekstowa)."""
-    opts = PdfPipelineOptions()
-    opts.do_ocr = True
-    opts.ocr_options = OcrMacOptions(lang=["pl-PL"])
-    opts.ocr_options.force_full_page_ocr = True
-    return DocumentConverter(format_options={
-        InputFormat.PDF: PdfFormatOption(pipeline_options=opts),
-        InputFormat.IMAGE: ImageFormatOption(pipeline_options=opts),
-    })
-
-
 def ocr_markdown(doc: Path) -> str:
-    """OCR dokumentu -> markdown; cache w OCR_CACHE (re-run pomija OCR)."""
-    global _CONV
-    cached = OCR_CACHE / (doc.stem + ".md")
-    if cached.exists():
-        return cached.read_text(encoding="utf-8")
-    if _CONV is None:
-        _CONV = _ocr_converter()
-    md = _CONV.convert(str(doc)).document.export_to_markdown()
-    OCR_CACHE.mkdir(parents=True, exist_ok=True)
-    cached.write_text(md, encoding="utf-8")
-    return md
+    """OCR dokumentu -> markdown; cache w OCR_CACHE (re-run pomija OCR). Silnik: src/ocr.py."""
+    return _ocr_markdown(doc, OCR_CACHE)
 
 
 def main() -> int:

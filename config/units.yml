@@ -1,0 +1,19 @@
+# Warstwa 2 — normalizacja jednostek.
+# Warianty (w tym błędy OCR) -> kanoniczna forma. Klucz znormalizowany:
+# lowercase, bez diakrytyków, bez gwiazdek/spacji (patrz norm() w kodzie).
+# Dodanie laboratorium = dopisanie wariantów tutaj, bez zmiany kodu.
+aliases:
+  "tys/ul": "tys/µl"
+  "tys/u1": "tys/µl"        # OCR: l -> 1
+  "tys/u|": "tys/µl"        # OCR: l -> |
+  "mln/ul": "mln/µl"
+  "g/dl": "g/dl"
+  "ip/b": "g/dl"            # OCR (RapidOCR) mangnął g/dl
+  "ip/8": "g/dl"
+  "%": "%"
+  "fl": "fl"
+  "f": "fl"                 # OCR uciął "fl" -> "f"
+  "pg": "pg"
+  "mg/dl": "mg/dl"
+  "g/ml": "g/ml"
+  "mg/l": "mg/l"

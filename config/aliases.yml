@@ -1,0 +1,65 @@
+# Warstwa 1 — mapowanie nazw markerów -> nazwa kanoniczna, SCOPED PER PANEL.
+#
+# Dlaczego panele: ten sam napis znaczy różne rzeczy zależnie od badania.
+#   "Leukocyty" w morfologii = WBC (krew); "Leukocyty" w moczu = leukocyty moczu.
+# Panel wykrywany z nagłówka sekcji po kodzie ICD-9 (np. "ICD-9: C55" -> morfologia).
+#
+# Klucz markera znormalizowany: lowercase, bez polskich diakrytyków, bez gwiazdek
+# (patrz norm() w src/structural_pipeline.py) — dzięki temu "Płytki"/"Plytki" (błąd OCR)
+# trafiają w ten sam klucz.
+#
+# Pipeline czyta WYŁĄCZNIE ten (zatwierdzony) słownik. Nieznane nazwy -> Warstwa 3
+# proponuje wpis do data/pending/aliases.yml; operator zatwierdza, przenosząc tutaj.
+
+panels:
+  morfologia:
+    icd9: ["C55"]
+    markers:
+      "leukocyty": "WBC"
+      "erytrocyty": "RBC"
+      "hemoglobina": "HGB"
+      "hematokryt": "HCT"
+      "mcv": "MCV"
+      "mch": "MCH"
+      "mchc": "MCHC"
+      "rdw-cv": "RDW_CV"
+      "plytki krwi": "PLT"
+      "pdw": "PDW"
+      "mpv": "MPV"
+      "p-lcr": "P_LCR"
+      "neutrofile": "NEU"
+      "limfocyty": "LYM"
+      "monocyty": "MONO"
+      "eozynofile": "EOS"
+      "bazofile": "BASO"
+
+  mocz:
+    icd9: ["A01"]
+    markers:
+      "przejrzystosc": "urine_clarity"
+      "barwa": "urine_color"
+      "ciezar wlasciwy": "urine_specific_gravity"
+      "ph": "urine_ph"
+      "glukoza": "urine_glucose"
+      "ketony": "urine_ketones"
+      "urobilinogen": "urine_urobilinogen"
+      "bilirubina": "urine_bilirubin"
+      "bialko": "urine_protein"
+      "leukocyty": "urine_leukocytes"
+      "krew": "urine_blood"
+      "azotyny": "urine_nitrites"
+
+  serologia_hcv:
+    icd9: ["V48"]
+    markers:
+      "przeciwciala anty-hcv": "anti_HCV"
+
+  serologia_hbv:
+    icd9: ["V39"]
+    markers:
+      "antygen hbs": "HBsAg"
+
+  krew_utajona:
+    icd9: ["A17"]
+    markers:
+      "krew utajona w kale": "FOB"

@@ -3,6 +3,12 @@
 ## Cel
 Ocena jakości OCR na realnej próbce obu klas dokumentów zanim zbudujemy cokolwiek dalej. To spike — kod może być brzydki, wnioski mają być twarde.
 
+Sedno: to **decyzja o silniku i konfiguracji OCR**, nie budowa modułu. Od jakości OCR zależy wszystko dalej — standaryzacja strukturalna i ekstrakcja narracyjna dostają na wejściu dokładnie to, co wypluje OCR. Zły OCR = pipeline parsuje śmieci.
+
+„Jakość" znaczy co innego dla każdej klasy:
+- **strukturalne** — czy tabela przeżywa: marker → wartość → jednostka → zakres w dobrych polach (mojibake = nie ma czego parsować);
+- **narracyjne** — czy proza jest czytelna i kompletna (LLM nie wyciągnie ustaleń z krzaków).
+
 ## Zakres / Definition of Done
 - [x] Docling przetwarza próbkę: 5 strukturalnych + 5 narracyjnych — `src/ocr_spike.py`, 10/10 OK, wyjście MD+JSON w `data/reports/ocr-spike/`
 - [x] Apple Vision jako backend OCR dla zdjęć (HEIC/JPG) — porównany (ocrmac, `lang=pl-PL`); **wyraźnie lepszy na polskim** (diakrytyki, jednostki, brak chińskich glifów), wyjście w `data/reports/ocr-spike-applevision/`. Rekomendacja: silnik podstawowy
@@ -67,7 +73,7 @@ Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, ni
 
 **Dlaczego:** narracyjne (70% wolumenu) Apple Vision oddaje niemal bezbłędnie, RapidOCR potrafił nie wyciągnąć całego opisu. Dla strukturalnych jakość tekstu jest wtórna — `aliases.yml`/`units.yml` korygują deterministycznie „Plytki"→„Płytki krwi", „IP/B"→„g/dl"; nienaprawialna jest tylko zgubiona wartość. RapidOCR-forced był tam odrobinę lepszy w kompletności komórek, ale różnica mała, a jeden silnik jest prostszy i human-in-the-loop łapie rzadki brak.
 
-**Pułapki:** próbka strukturalna to N=2 realne tabele — czy Apple Vision gubi komórki systematycznie, rozstrzyga etap 3. Nagłówki kolumn nie trzymają się tabeli i znikają na 2. stronie — parsować pozycyjnie wg stałego layoutu labu (`laboratories.yml`), nie wg OCR-owanych nagłówków. To problem niezależny od silnika.
+**Pułapki:** próbka strukturalna to N=2 realne tabele — czy Apple Vision gubi komórki systematycznie, rozstrzyga etap 3. Klasyfikacja kolumn jest **niespójna między stronami tego samego dokumentu**: na 1. stronie nagłówki (Wynik/Jedn/MIN/MAX) nie przykleiły się do tabeli (zostały luźnym tekstem nad nią), na 2. stronie tabela ma poprawny wiersz nagłówka `Badanie|Wynik|Jedn.|MIN|MAX|FLAGA`. Skoro nawet w jednym pliku raz działa, raz nie — nie wolno ufać OCR-owanym nagłówkom; parsować pozycyjnie wg stałego layoutu labu (`laboratories.yml`). To problem niezależny od silnika.
 
 ### Jakość wyjścia — czy struktura przeżywa
 

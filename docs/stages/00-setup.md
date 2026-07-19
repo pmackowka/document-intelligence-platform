@@ -3,6 +3,14 @@
 ## Cel
 Działające fundamenty: repozytorium git, środowisko Python, lokalny n8n, smoke test `claude -p`.
 
+Sedno: postawić i **zweryfikować** warstwę, na której stanie cała reszta — zanim napiszemy pierwszą linijkę logiki biznesowej. Każdy element to prerekwizyt czegoś konkretnego dalej:
+- **git + prywatny remote** — PRD jako living document (commit przy każdej zmianie zakresu); treść medyczna nigdy w repo;
+- **środowisko Python (uv)** — reprodukowalny stack pod Docling/Presidio/spaCy z jednego locka;
+- **n8n lokalnie + MCP** — orkiestrator osiągalny z Claude Code, budowany kodem, nie klikaniem;
+- **smoke test `claude -p`** — dowód, że programistyczna ścieżka do LLM (headless, na abonamencie Pro) działa, zanim się na niej oprzemy.
+
+„Done" = te fundamenty stoją i są sprawdzone, nie tylko zainstalowane.
+
 ## Zakres / Definition of Done
 - [x] `git init` + pierwszy commit (PRD, CLAUDE.md, struktura docs); prywatny remote na GitHubie
 - [x] Struktura projektu (`config/`, `src/`, `data/{raw,pending,store,reports}`); drzewo i reguła prywatności ścieżek w CLAUDE.md

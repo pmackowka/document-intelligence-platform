@@ -10,8 +10,8 @@ Sedno: to **decyzja o silniku i konfiguracji OCR**, nie budowa modułu. Od jako�
 - **narracyjne** — czy proza jest czytelna i kompletna (LLM nie wyciągnie ustaleń z krzaków).
 
 ## Zakres / Definition of Done
-- [x] Docling przetwarza próbkę: 5 strukturalnych + 5 narracyjnych — `src/ocr_spike.py`, 10/10 OK, wyjście MD+JSON w `data/reports/ocr-spike/`
-- [x] Apple Vision jako backend OCR dla zdjęć (HEIC/JPG) — porównany (ocrmac, `lang=pl-PL`); **wyraźnie lepszy na polskim** (diakrytyki, jednostki, brak chińskich glifów), wyjście w `data/reports/ocr-spike-applevision/`. Rekomendacja: silnik podstawowy
+- [x] Docling przetwarza próbkę: 5 strukturalnych + 5 narracyjnych — `src/ocr_spike.py`, 10/10 OK, wyjście MD+JSON w `data/interim/ocr-spike/`
+- [x] Apple Vision jako backend OCR dla zdjęć (HEIC/JPG) — porównany (ocrmac, `lang=pl-PL`); **wyraźnie lepszy na polskim** (diakrytyki, jednostki, brak chińskich glifów), wyjście w `data/interim/ocr-spike-applevision/`. Rekomendacja: silnik podstawowy
 - [x] Wyjście pośrednie Markdown + JSON ocenione ręcznie — sign-off właściciela zrobiony: RapidOCR lepsze umiejscowienie komórek tabeli, Apple Vision lepszy polski i narracja; struktura tabel przeżywa pod wymuszonym OCR (domyślny Docling → mojibake)
 - [x] Decyzja: silnik podstawowy **Apple Vision** (`pl-PL`); strukturalne = wymuszony OCR; narracyjne z dobrą warstwą = warstwa tekstowa; duże zdjęcia = downscale/limit PIL; RapidOCR jako fallback strukturalny (rewizja w etapie 3). Lista „nieczytelnych": 0/10
 

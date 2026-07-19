@@ -25,15 +25,16 @@ Zasady przekrojowe:
 - **Wiedza domenowa w YAML**, nie w kodzie: `aliases.yml`, `units.yml`, `reference_ranges.yml`, `laboratories.yml`. Dodanie laboratorium nie może wymagać zmiany kodu.
 - **Ścieżki artefaktów (reguła prywatności)**: wszystko, co zawiera treść medyczną — surowe dokumenty, `pending/` (propozycje aliasów/ustaleń), magazyn NDJSON — żyje pod `data/` (w `.gitignore`). Wersjonowane są wyłącznie `config/` (YAML domenowy bez PII), kod i docs. Nigdy nie twórz plików z treścią medyczną poza `data/`.
 
-  ```
-  config/               # YAML domenowy (aliases, units, ...) — wersjonowany
-  src/                  # kod Python — wersjonowany
-  data/raw/structural/  # surowe dok. strukturalne (krew/mocz)  — lokalnie
-  data/raw/narrative/   # surowe dok. narracyjne (USG/MRI/TK)   — lokalnie
-  data/pending/         # propozycje do zatwierdzenia            — lokalnie
-  data/store/           # magazyn NDJSON (źródło prawdy)         — lokalnie
-  data/reports/         # raporty Markdown                       — lokalnie
-  ```
+  | Ścieżka | Zawartość | Git | Kiedy zapełniane |
+  |---|---|---|---|
+  | `config/` | YAML domenowy (`aliases`, `units`, `reference_ranges`, `laboratories`) | wersjonowany | etap 3 |
+  | `src/` | kod Python (logika biznesowa) | wersjonowany | od etapu 0 |
+  | `data/raw/structural/` | surowe dok. strukturalne (krew/mocz) | lokalnie | ingest (próbka: etap 1) |
+  | `data/raw/narrative/` | surowe dok. narracyjne (USG/MRI/TK) | lokalnie | ingest (próbka: etap 1) |
+  | `data/interim/` | wyjście pośrednie: OCR-owany + zanonimizowany MD/JSON | lokalnie | etap 1 (OCR), 5 (anonimizacja) |
+  | `data/pending/` | propozycje aliasów/ustaleń do zatwierdzenia | lokalnie | etap 3 (aliasy), 5 (ustalenia) |
+  | `data/store/` | magazyn NDJSON — źródło prawdy, BigQuery-ready | lokalnie | etap 3, 5, 8 |
+  | `data/reports/` | **finalne** raporty Markdown (trendy, na wizytę) | lokalnie | etap 6 |
 
   Podfoldery `data/` istnieją tylko lokalnie (git nie śledzi ignorowanych ścieżek) — kod pipeline'u tworzy je przy starcie (`mkdir -p`).
 

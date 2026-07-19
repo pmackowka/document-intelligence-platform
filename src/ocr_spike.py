@@ -3,7 +3,7 @@
 Kod spike'owy — celem są twarde wnioski o jakości OCR, nie produkcyjna elegancja.
 
 Wejście:  data/raw/{structural,narrative}/*
-Wyjście:  data/reports/ocr-spike/{structural,narrative}/<nazwa>.md + .json
+Wyjście:  data/interim/ocr-spike/{structural,narrative}/<nazwa>.md + .json
 Na końcu: tabela podsumowania (format, strony, znaki, tabele, czas, status).
 
 Skrypt jest w pełni lokalny — żaden tekst nie opuszcza maszyny (reguła: nic do
@@ -21,7 +21,7 @@ from docling.document_converter import DocumentConverter
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"
-OUT = ROOT / "data" / "reports" / "ocr-spike"
+OUT = ROOT / "data" / "interim" / "ocr-spike"
 
 CLASSES = ["structural", "narrative"]
 EXTS = {".pdf", ".png", ".jpg", ".jpeg", ".heic", ".tif", ".tiff"}

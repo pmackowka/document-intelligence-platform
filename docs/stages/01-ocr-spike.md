@@ -5,9 +5,9 @@ Ocena jakości OCR na realnej próbce obu klas dokumentów zanim zbudujemy cokol
 
 ## Zakres / Definition of Done
 - [x] Docling przetwarza próbkę: 5 strukturalnych + 5 narracyjnych — `src/ocr_spike.py`, 10/10 OK, wyjście MD+JSON w `data/reports/ocr-spike/`
-- [ ] Apple Vision jako backend OCR dla zdjęć (HEIC/JPG) — porównanie jakości
-- [ ] Wyjście pośrednie Markdown + JSON ocenione ręcznie — **ocena techniczna gotowa** (struktura tabel przeżywa pod wymuszonym OCR; domyślny Docling → mojibake, w notatkach); **porównanie właściciela z oryginałami** (dokładność wartości, jakość diakrytyków) — sign-off po teście Apple Vision
-- [ ] Decyzja: które formaty wejściowe wymagają specjalnego traktowania; lista dokumentów „nieczytelnych" (licznik do S1) — wsad zebrany w notatkach; finalizacja po porównaniu z Apple Vision
+- [x] Apple Vision jako backend OCR dla zdjęć (HEIC/JPG) — porównany (ocrmac, `lang=pl-PL`); **wyraźnie lepszy na polskim** (diakrytyki, jednostki, brak chińskich glifów), wyjście w `data/reports/ocr-spike-applevision/`. Rekomendacja: silnik podstawowy
+- [x] Wyjście pośrednie Markdown + JSON ocenione ręcznie — sign-off właściciela zrobiony: RapidOCR lepsze umiejscowienie komórek tabeli, Apple Vision lepszy polski i narracja; struktura tabel przeżywa pod wymuszonym OCR (domyślny Docling → mojibake)
+- [x] Decyzja: silnik podstawowy **Apple Vision** (`pl-PL`); strukturalne = wymuszony OCR; narracyjne z dobrą warstwą = warstwa tekstowa; duże zdjęcia = downscale/limit PIL; RapidOCR jako fallback strukturalny (rewizja w etapie 3). Lista „nieczytelnych": 0/10
 
 ## Notatki
 <!-- Grupuj po temacie, nie po dacie (chronologię trzyma git). Każdy podpunkt
@@ -50,6 +50,24 @@ Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, ni
 **Jak działa:** model jest chińsko-angielski — wykrywa i rozpoznaje tekst na renderowanym obrazie strony. Dla pisma łacińskiego działa, ale bez dedykowanej obsługi polskich znaków.
 
 **Pułapki:** polskie diakrytyki bywają gubione (ł→t: „prawidtowe", „byto") lub mapowane na **chińskie glify** (Ż→之: „ME之CZYZNA", „之EL"); jednostki też mangną (g/dl → „IP/B"). Dla narracji (LLM ekstrahuje sens) akceptowalne; dla strukturalnych jednostka jest normalizowana deterministycznie przez `units.yml` po nazwie markera, więc błąd OCR jednostki jest odzyskiwalny. Chińskie glify w nazwach własnych to argument, że Apple Vision (natywny polski) może być lepszym backendem.
+
+### Apple Vision (ocrmac) vs RapidOCR — jakość na polskim
+
+**Decyzja:** Apple Vision (backend `ocrmac`, `lang=['pl-PL']`) daje wyraźnie lepszą jakość na polskim niż RapidOCR — rekomendowany silnik podstawowy. Domyślny `lang` w `OcrMacOptions` to `fr/de/es/en` (bez polskiego) — trzeba jawnie ustawić `pl-PL`, inaczej jakość spada.
+
+**Dlaczego:** na tej samej morfologii Apple Vision poprawnie czyta diakrytyki (MAĆKÓWKA, MĘŻCZYZNA, Płytki), jednostki (g/dl, fl, pg) i nie wstawia chińskich glifów; RapidOCR gubił ł/ę, mapował Ż→之, mangłał g/dl→„IP/B". W narracji Apple Vision jest niemal na poziomie natywnej warstwy tekstowej (pełne „krętego", „kątnicy", „wstępnicy").
+
+**Jak działa:** `ocrmac` woła macOS Vision (framework `vision`, tryb `accurate`) przez pyobjc; Docling podpina go jako `ocr_options = OcrMacOptions(...)`. Silnik natywny (Neural Engine) — szybki, bez pobierania modeli.
+
+**Pułapki:** (1) na dużych zdjęciach ścieżka ocrmac→PIL wywala `DecompressionBombError` (USG 5712×4284 renderowane do ~220 Mpx > limit PIL) — podnieść `Image.MAX_IMAGE_PIXELS` lub downscale'ować źródło. (2) Apple Vision gubi pojedyncze komórki liczbowe w tabeli (kilka wartości MIN/MAX, które RapidOCR złapał) — dlatego sign-off operatora na wartościach. (3) drobne reszty: „μl"→„u1/u|", „śluzowa"→„sluzowa", „Wałbrzyska"→„Watbrzyska".
+
+### Wybór silnika OCR — decyzja
+
+**Decyzja:** jeden silnik — **Apple Vision** (`ocrmac`, `lang=pl-PL`) — dla obu klas. RapidOCR zostaje zainstalowany jako fallback strukturalny (bez dual-run w V1). Strukturalne = wymuszony OCR; narracyjne z dobrą warstwą tekstową = warstwa (bez OCR); duże zdjęcia = downscale / limit PIL.
+
+**Dlaczego:** narracyjne (70% wolumenu) Apple Vision oddaje niemal bezbłędnie, RapidOCR potrafił nie wyciągnąć całego opisu. Dla strukturalnych jakość tekstu jest wtórna — `aliases.yml`/`units.yml` korygują deterministycznie „Plytki"→„Płytki krwi", „IP/B"→„g/dl"; nienaprawialna jest tylko zgubiona wartość. RapidOCR-forced był tam odrobinę lepszy w kompletności komórek, ale różnica mała, a jeden silnik jest prostszy i human-in-the-loop łapie rzadki brak.
+
+**Pułapki:** próbka strukturalna to N=2 realne tabele — czy Apple Vision gubi komórki systematycznie, rozstrzyga etap 3. Nagłówki kolumn nie trzymają się tabeli i znikają na 2. stronie — parsować pozycyjnie wg stałego layoutu labu (`laboratories.yml`), nie wg OCR-owanych nagłówków. To problem niezależny od silnika.
 
 ### Jakość wyjścia — czy struktura przeżywa
 

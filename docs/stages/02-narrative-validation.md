@@ -3,6 +3,20 @@
 ## Cel
 Sprawdzić na 5–10 opisach (USG, MRI, kolonoskopia), czy ekstrakcja ustaleń przez LLM daje użyteczne wyniki — **zanim** zbudujemy wokół niej moduł. To warunek z PRD: 70% danych zależy od tego mechanizmu.
 
+Sedno: to **strukturyzacja prozy**, nie wnioskowanie medyczne. Model ma wiernie przełożyć opis na rekordy w schemacie, nie interpretować. „Użyteczny wynik" = rekord wierny, kompletny i dobrze umiejscowiony (wartość w polu wartości, jednostka w polu jednostki).
+
+Wejście (proza z opisu USG):
+> „W nerce prawej, w dolnym biegunie, widoczny złóg o wymiarach 6 mm. W nerce lewej torbiel prosta 12 mm. Wątroba, trzustka, śledziona — bez zmian."
+
+Wyjście (rekordy w schemacie):
+
+| finding | location | value | unit | status | exam_type |
+|---|---|---|---|---|---|
+| złóg (kamień) | nerka prawa, dolny biegun | 6 | mm | obecny | USG j. brzusznej |
+| torbiel prosta | nerka lewa | 12 | mm | obecny | USG j. brzusznej |
+
+Trzy zdania → dwa płaskie rekordy, odpytywalne SQL-em (dopiero to umożliwia trend: kamień 6 mm w 2023 → 8 mm w 2025). „Bez zmian" → świadomie **brak** rekordu (negacja, nie ustalenie). Walidujemy dokładnie to: czy model zamienia zdania na wiersze — wiernie, bez zmyślania i bez gubienia.
+
 ## Zakres / Definition of Done
 - [ ] 5–10 opisów zanonimizowanych **ręcznie** (Presidio jeszcze nie istnieje — PII nie wychodzi bez anonimizacji, reguła twarda z PRD)
 - [ ] Prompt ekstrakcyjny do schematu: `finding`, `location`, `measurement_value`, `measurement_unit`, `status`, `exam_type`, `exam_date`

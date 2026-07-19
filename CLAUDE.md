@@ -63,6 +63,7 @@ Implementacja podzielona na etapy `00`–`08`; każdy plik w `docs/stages/` ma s
 
 - **Grupuj po temacie, nie po dacie.** Każdy temat to nagłówek `### <czego dotyczy>` (zwykle krok z Zakresu lub użyte narzędzie), a pod nim samodzielna notatka do nauki.
 - Pod tematem układ: **Decyzja** (co ustalono) → **Dlaczego** (uzasadnienie, trade-offy) → **Jak działa** (mechanizm narzędzia pod spodem — sedno wartości edukacyjnej) → **Pułapki** (co zaskoczyło). Nie każdy temat wymaga wszystkich czterech. **Każdy podpunkt w osobnym akapicie** (pusta linia między nimi) — inaczej markdown skleja je w jeden blok i notatka jest nieczytelna.
+- **Etykiety akapitów to zbiór zamknięty: dokładnie `Decyzja` / `Dlaczego` / `Jak działa` / `Pułapki` (lub podzbiór).** Nie wymyślaj własnych etykiet (np. wiązanych z numerami DoD w stylu „Struktura przeżywa (punkt 3):") ani nie łącz dwóch w jedną („Jak działa / Pułapki:"). Ta sama struktura obowiązuje we **wszystkich** plikach `docs/stages/`; wzorzec = `docs/stages/00-setup.md`. Trzymaj ją stałą między sesjami — nie zmieniaj konwencji.
 - **Bez dat** — chronologię trzyma git; notatka ma być czytelnym wyjaśnieniem, nie changelogiem.
 - **Nie log czynności** („zrobiliśmy X, potem Y") — zapisuj tylko to, co nieoczywiste i użyteczne za miesiąc.
 - Nie powielaj treści PRD — zakres i wymagania żyją w `docs/prd.md`.

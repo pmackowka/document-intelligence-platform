@@ -2,7 +2,17 @@
 #
 # Dlaczego panele: ten sam napis znaczy różne rzeczy zależnie od badania.
 #   "Leukocyty" w morfologii = WBC (krew); "Leukocyty" w moczu = leukocyty moczu.
+#   "Barwa" w moczu = urine_color; "Barwa" w kale = stool_color.
+#   "Glukoza" w moczu (tabela) = urine_glucose; "Glukoza" w biochemii (sekcja) = glucose.
+#
 # Panel wykrywany z nagłówka sekcji po kodzie ICD-9 (np. "ICD-9: C55" -> morfologia).
+#
+# DWA FORMATY dokumentów (pole `format`):
+#   table   — wyniki w tabeli markdown (|...|); parsowanie POZYCYJNE (nazwa|wynik|jedn|MIN|MAX).
+#   section — wyniki luźne: nazwa markera (często z inline "(ICD-9: kod)") a wartość/jednostka/
+#             /zakres rozrzucone w kolejnych liniach (lipidogram, biochemia, serologia).
+#             Markery `section` rozpoznawane po NAZWIE (nie po kodzie ICD, bo bywa popsuty:
+#             "-", "055"); ich kod ICD jest per-marker, nie per-panel.
 #
 # Klucz markera znormalizowany: lowercase, bez polskich diakrytyków, bez gwiazdek
 # (patrz norm() w src/structural_pipeline.py) — dzięki temu "Płytki"/"Plytki" (błąd OCR)
@@ -13,6 +23,7 @@
 
 panels:
   morfologia:
+    format: table
     icd9: ["C55"]
     markers:
       "leukocyty": "WBC"
@@ -23,6 +34,7 @@ panels:
       "mch": "MCH"
       "mchc": "MCHC"
       "rdw-cv": "RDW_CV"
+      "rdw-sd": "RDW_SD"
       "plytki krwi": "PLT"
       "pdw": "PDW"
       "mpv": "MPV"
@@ -32,8 +44,11 @@ panels:
       "monocyty": "MONO"
       "eozynofile": "EOS"
       "bazofile": "BASO"
+      "niedojrzale granulocyty ig": "IG"
+      "nrbc": "NRBC"
 
   mocz:
+    format: table
     icd9: ["A01"]
     markers:
       "przejrzystosc": "urine_clarity"
@@ -49,17 +64,74 @@ panels:
       "krew": "urine_blood"
       "azotyny": "urine_nitrites"
 
+  koprogram:
+    format: table
+    icd9: ["A23"]
+    markers:
+      "barwa": "stool_color"
+      "konsystencja": "stool_consistency"
+      "won": "stool_odor"
+      "odczyn": "stool_ph"
+      "wlokna miesne dobrze strawione liczne": "stool_muscle_fibers_digested"
+      "wlokna miesne zle strawione": "stool_muscle_fibers_undigested"
+      "krople tluszczu liczne krysztaly kw. t.": "stool_fat_droplets"
+      "ziarna skrobi": "stool_starch_granules"
+
+  biochemia:
+    format: section
+    icd9: []          # kod ICD jest per-marker (I17, I19, N13...); rozpoznanie po nazwie
+    markers:
+      "ob": "ESR"
+      "glukoza": "glucose"
+      "alt": "ALT"
+      "ast": "AST"
+      "mocznik": "urea"
+      "kreatynina": "creatinine"
+      "egfr": "eGFR"
+      "kwas moczowy": "uric_acid"
+
+  lipidy:
+    format: section
+    icd9: ["M71"]     # nagłówek "Lipidogram (ICD-9: M71)" wprowadza markery-dzieci
+    markers:
+      "cholesterol calkowity": "CHOL"
+      "cholesterol hdl": "HDL"
+      "cholesterol nie-hdl": "nonHDL"
+      "cholesterol ldl": "LDL"
+      "triglicerydy": "TG"
+
+  tarczyca:
+    format: section
+    icd9: []          # TSH/FT3/FT4 jako markery inline, kod per-marker (L69, O55, O69)
+    markers:
+      "tsh": "TSH"
+      "ft3": "FT3"
+      "ft4": "FT4"
+
+  psa:
+    format: section
+    icd9: []          # PSA jako marker inline / dzieci nagłówka "PSA wskaźnik (ICD-9: -)"
+    markers:
+      "psa": "PSA"
+      "psa calkowity": "PSA"
+      "psa wolny": "PSA_free"
+      "psa - wskaznik (fpsa/psa)": "PSA_ratio"
+      "psa wskaznik (fpsa/psa)": "PSA_ratio"
+
   serologia_hcv:
+    format: section
     icd9: ["V48"]
     markers:
       "przeciwciala anty-hcv": "anti_HCV"
 
   serologia_hbv:
+    format: section
     icd9: ["V39"]
     markers:
       "antygen hbs": "HBsAg"
 
   krew_utajona:
+    format: section
     icd9: ["A17"]
     markers:
       "krew utajona w kale": "FOB"

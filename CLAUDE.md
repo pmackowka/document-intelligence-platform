@@ -22,12 +22,12 @@ Zasady przekrojowe:
 - **Human-in-the-loop obowiązkowy**: propozycje aliasów i wyekstrahowanych ustaleń trafiają do `pending/*.yml`; pipeline czyta wyłącznie zatwierdzone wpisy. Operator zatwierdza edytując pliki w Claude Code.
 - **Kolejność anonimizacji (reguła twarda)**: żaden tekst dokumentu nie trafia do zewnętrznego API przed Presidio. Jedyny wyjątek: weryfikacja aliasów (sama nazwa markera, bez PII).
 - **Magazyn danych**: katalog NDJSON, płaskie rekordy append-only, schemat BigQuery-ready (ręczny load; bez SQLite, bez bazy).
-- **Wiedza domenowa w YAML**, nie w kodzie: `aliases.yml`, `units.yml`, `reference_ranges.yml`, `laboratories.yml`. Dodanie laboratorium nie może wymagać zmiany kodu.
+- **Wiedza domenowa w YAML**, nie w kodzie: `aliases.yml` (panel-aware, pole `format: table|section`), `units.yml`, `marker_labels.yml` (kod kanoniczny → polska etykieta do raportów), `reference_ranges.yml`, `laboratories.yml`. Dodanie laboratorium/panelu nie może wymagać zmiany kodu.
 - **Ścieżki artefaktów (reguła prywatności)**: wszystko, co zawiera treść medyczną — surowe dokumenty, `pending/` (propozycje aliasów/ustaleń), magazyn NDJSON — żyje pod `data/` (w `.gitignore`). Wersjonowane są wyłącznie `config/` (YAML domenowy bez PII), kod i docs. Nigdy nie twórz plików z treścią medyczną poza `data/`.
 
   | Ścieżka | Zawartość | Etap potoku | Git | Kiedy zapełniane |
   |---|---|---|---|---|
-  | `config/` | YAML domenowy (`aliases`, `units`, `reference_ranges`, `laboratories`) | — | wersjonowany | etap 3 |
+  | `config/` | YAML domenowy (`aliases`, `units`, `marker_labels`, `reference_ranges`, `laboratories`) | — | wersjonowany | etap 3 |
   | `src/` | kod Python (logika biznesowa) | — | wersjonowany | od etapu 0 |
   | `data/raw/structural/` | surowe dok. strukturalne (krew/mocz) | **surowy** | lokalnie | ingest (próbka: etap 1) |
   | `data/raw/narrative/` | surowe dok. narracyjne (USG/MRI/TK) | **surowy** | lokalnie | ingest (próbka: etap 1) |

@@ -17,3 +17,14 @@ aliases:
   "mg/dl": "mg/dl"
   "g/ml": "g/ml"
   "mg/l": "mg/l"
+  # --- jednostki formatu sekcyjnego (biochemia, lipidogram, tarczyca, PSA) ---
+  "u/l": "U/l"
+  "u/i": "U/l"              # OCR: l -> I
+  "u/1": "U/l"              # OCR: l -> 1
+  "ml/min/1,73m2": "ml/min/1,73m²"
+  "miu/ml": "mIU/ml"
+  "uiu/ml": "µIU/ml"        # µ zapisane jako u
+  "pg/ml": "pg/ml"
+  "ng/dl": "ng/dl"
+  "ng/ml": "ng/ml"
+  "mm/h": "mm/h"

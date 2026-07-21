@@ -48,6 +48,8 @@ PYTHONPATH=src uv run python src/report.py
 ```
 Zapisuje `data/reports/<data>-trendy.md` ze wszystkimi trendami do tej pory.
 
+**7. Opcjonalnie — odśwież tabelę w BigQuery.** `structural.ndjson` jest nadpisywany od zera przy każdym uruchomieniu (nie doklejany) — więc load do BigQuery też musi być **replace całej tabeli, nigdy append** (inaczej duplikaty starych rekordów przy każdym cyklu). Pełna instrukcja (DROP TABLE + Create table → Upload, schemat do wklejenia): `docs/stages/03-storage-analysis.md`, sekcja „Instrukcja: ręczny load".
+
 ### Przykład
 
 Wracasz z laboratorium z 3 nowymi wynikami (morfologia, lipidogram, TSH). Kopiujesz 3 pliki do `data/raw/structural/`, odpalasz komendę z kroku 2.

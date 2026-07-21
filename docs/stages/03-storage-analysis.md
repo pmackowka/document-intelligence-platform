@@ -58,11 +58,13 @@ Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, ni
 
 **Pułapki:** sam load NDJSON do BigQuery jest świadomie ręczny (PRD: „Automatyczny load do BigQuery" poza zakresem V1) — wymaga projektu/kont GCP, których nie mam. Ten etap dostarcza walidację i pewność, że load się powinien udać, nie wykonuje go za operatora. Automatyzacja (np. `bq load` z terminala) to kandydat na przyszłość — zmiana zakresu, wymaga aktualizacji PRD, nie robimy tego po cichu.
 
-### Instrukcja: ręczny load `structural.ndjson` do BigQuery (konsola GCP)
+### Instrukcja: ręczny load `structural.ndjson` do BigQuery (konsola GCP) — procedura CYKLICZNA
 
-**Decyzja:** load przez UI konsoli GCP (Create table → Upload), nie `bq` CLI — operator woli klikać, ma pełną kontrolę nad każdym krokiem i widzi błędy bezpośrednio w przeglądarce.
+**Decyzja:** load przez UI konsoli GCP (Create table → Upload), nie `bq` CLI — operator woli klikać, ma pełną kontrolę nad każdym krokiem i widzi błędy bezpośrednio w przeglądarce. Za każdym razem, gdy chcesz odświeżyć dane w BigQuery (nie tylko przy pierwszym loadzie) — **zawsze pełny replace tabeli (Krok 0 + Krok 1), nigdy append**.
 
-**Jak działa:** pierwszy load (schemat 11 kolumn) przeszedł bez błędów. Schemat od tego czasu rozszerzony o `reference_note` (12. kolumna, patrz notatka „reference_note..." niżej) — tabelę trzeba przeładować od zera, BigQuery nie dokłada kolumn do istniejącej tabeli przez UI uploadu.
+**Dlaczego replace, nie append:** `structural_pipeline.py` przy każdym uruchomieniu przetwarza WSZYSTKIE dokumenty z `data/raw/structural/` od zera i **nadpisuje** `data/store/structural.ndjson` (`open(out, "w")` — tryb zapisu, nie dopisywania). Plik po każdym uruchomieniu pipeline'u to zawsze pełny, aktualny stan całego magazynu, nie sam przyrost nowych rekordów. Append do BigQuery załadowałby więc też rekordy, które tabela już ma — duplikat całej tabeli przy każdym cyklu. Replace jest bezpieczny, bo źródło prawdy to plik NDJSON, nie sama tabela w BigQuery (którą zawsze można odtworzyć od zera).
+
+**Jak działa:** pierwszy load (schemat 11 kolumn) przeszedł bez błędów. Schemat od tego czasu rozszerzony o `reference_note` (12. kolumna, patrz notatka „reference_note..." niżej) — tabelę trzeba przeładować od zera, BigQuery nie dokłada kolumn do istniejącej tabeli przez UI uploadu. Ten sam Krok 0 + Krok 1 obowiązuje przy KAŻDYM kolejnym odświeżeniu (np. po dodaniu nowych wyników z etapu „Codzienny flow" w README), nie tylko przy zmianie schematu.
 
 **Krok 0 — usuń starą tabelę (dane + schemat):** w konsoli GCP → **BigQuery Studio** → nowe okno **SQL query** → wklej i uruchom (podmień `projekt.dataset.tabela` na realną nazwę):
 

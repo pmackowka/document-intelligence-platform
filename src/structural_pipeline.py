@@ -106,11 +106,17 @@ def is_separator(cells: list[str]) -> bool:
 # Linie-szum nagłówka/stopki (żeby nie wziąć ich za marker ani za wartość jakościową).
 # Rozszerzone o etap 4 (backfill, nowy format labu): nr księgi rejestrowej, daty przyjęcia/
 # pobrania próbki, materiał badany (material/materiał, w tym warianty OCR "materiat"/"materia"),
-# opis metody/procedury (w tym OCR M->V: "vetoda"), adnotacje "uwaga:".
+# opis metody/procedury (w tym OCR M->V: "vetoda"), adnotacje "uwaga:", linia autoryzacji
+# (bywa niesie fragment nazwiska lekarza + nr PWZ — realnie znaleziony przypadek, za krótki
+# na zaporę PII w Warstwie 3, więc musi być odcięty tutaj, wcześniej), oraz BARE nazwy sekcji/
+# paneli tego labu (BIOCHEMIA, HEMATOLOGIA, KOAGULOLOGIA, SUROWICA jako typ próbki, Komentarz) —
+# to tytuły grup, nigdy nazwy pojedynczego markera. `^` na początku chroni realne markery typu
+# "Magnez - surowica" (nie zaczyna się od "surowica", więc nie łapie).
 _NOISE = re.compile(
     r"^(data|badanie wykonano|dot\. materia|kod |oddzial|adres|pesel|plec|"
     r"wynik|jedn|min|max|flaga|pacjent|badanie|lek\.kier|odbiorca|dok\.|"
-    r"nr ksiegi|materia|metoda|vetoda|procedura|uwaga)", re.I
+    r"nr ksiegi|materia|metoda|vetoda|procedura|uwaga|autoryzowa|nazwa badania|"
+    r"wykonano|biochemia|hematologia|koagulologia|surowica|komentarz|morfologia)", re.I
 )
 
 

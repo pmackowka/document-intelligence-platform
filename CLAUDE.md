@@ -29,25 +29,25 @@ Zasady przekrojowe:
   | `data/raw/structural/` | surowe dok. strukturalne (krew/mocz) | **surowy** | lokalnie | ingest (próbka: etap 1) |
   | `data/interim/` | wyjście pośrednie: OCR-owany MD/JSON | **pośredni** | lokalnie | etap 1 (OCR) |
   | `data/pending/` | propozycje aliasów do zatwierdzenia | kontrola (HITL) | lokalnie | etap 2 |
-  | `data/store/` | magazyn NDJSON — źródło prawdy, BigQuery-ready | **finalny — dane** | lokalnie | etap 2, 5 |
+  | `data/store/` | magazyn NDJSON — źródło prawdy, BigQuery-ready | **finalny — dane** | lokalnie | etap 2, 4 |
   | `data/reports/` | **finalne** raporty Markdown (trendy, na wizytę) | **finalny — raport** | lokalnie | etap 3 |
 
   Podfoldery `data/` istnieją tylko lokalnie (git nie śledzi ignorowanych ścieżek) — kod pipeline'u tworzy je przy starcie (`mkdir -p`).
 
-  Ingest ląduje w `data/raw/structural/` — wyłącznie ręczny upload przez n8n, bez klasyfikacji (V1 obsługuje wyłącznie dokumenty strukturalne, nie ma czego routować). Brak konektora Google Drive (usunięty w PRD v1.1).
+  Ingest ląduje w `data/raw/structural/` — operator dodaje pliki ręcznie i uruchamia pipeline z terminala, bez klasyfikacji (V1 obsługuje wyłącznie dokumenty strukturalne, nie ma czego routować). Brak konektora Google Drive (usunięty w PRD v1.1).
 
 ## Stack i ograniczenia techniczne
 
-- **Python** — cała logika biznesowa (OCR, standaryzacja, zapis). **n8n** — wyłącznie orkiestracja, zero logiki.
+- **Python** — cała logika biznesowa (OCR, standaryzacja, zapis). Uruchamianie ręczne z terminala (`uv run python ...`); brak orkiestratora w V1 (n8n usunięty w PRD v1.2 — Apple Vision wymaga macOS, nie działa w kontenerze Docker).
 - **OCR**: Docling (główny silnik) + Apple Vision jako backend dla zdjęć. Środowisko: lokalnie na macOS.
-- **LLM: wyłącznie Claude przez abonament Pro — zero zakupu tokenów API.** Wywołania programistyczne przez Claude Code headless: `claude -p "<prompt>"` jako komenda shell z Pythona/n8n. Weryfikacja aliasów: Haiku (`--model`). Nie dodawaj kodu używającego kluczy API Anthropic ani SDK z rozliczeniem tokenowym.
+- **LLM: wyłącznie Claude przez abonament Pro — zero zakupu tokenów API.** Wywołania programistyczne przez Claude Code headless: `claude -p "<prompt>"` jako komenda shell z Pythona. Weryfikacja aliasów: Haiku (`--model`). Nie dodawaj kodu używającego kluczy API Anthropic ani SDK z rozliczeniem tokenowym.
 - Kod i nazwy po angielsku, komentarze i docstringi po polsku.
 - Diagramy Mermaid: etykiety węzłów zawsze w cudzysłowach (`A["..."]`), bez znaku `"` w treści etykiet — pełne reguły i historia incydentu na końcu `docs/roadmap.md`.
 - **Wynik polecenia Bash bywa niewidoczny dla operatora w UI** (chowa się pod zwiniętym „Ran 1 shell command", trzeba go ręcznie rozwinąć). Gdy operator prosi o pokazanie/wydrukowanie czegoś „tutaj"/„w terminalu"/„output" (tabela, przykładowe rekordy, diff) — wklej realny wynik wprost do treści odpowiedzi (blok ```), nie tylko odnoś się do niego w tekście.
 
 ## Praca etapami — `docs/stages/`
 
-Implementacja podzielona na etapy `00`–`05`; każdy plik w `docs/stages/` ma sekcje: **Cel**, **Zakres / Definition of Done** (checkboxy = kroki) i **Notatki**. Kolejność plików = kolejność pracy.
+Implementacja podzielona na etapy `00`–`04`; każdy plik w `docs/stages/` ma sekcje: **Cel**, **Zakres / Definition of Done** (checkboxy = kroki) i **Notatki**. Kolejność plików = kolejność pracy.
 
 **Workflow obowiązkowy w każdej sesji implementacyjnej:**
 
@@ -68,6 +68,6 @@ Etap skończony = wszystkie checkboxy odhaczone lub świadomie skreślone z adno
 
 ## Out of scope V1 (nie implementuj bez zmiany PRD)
 
-Domeny inne niż medyczna; przetwarzanie dokumentów narracyjnych (USG/MRI/TK/kolonoskopia); UI/dashboard/wykresy; automatyczny load do BigQuery; dziennik interwencji/stylu życia; RAG, wektorowe bazy, FastAPI/Docker/Cloud Run, MCP server, agenci (to wersje V2–V4 z zarysu).
+Domeny inne niż medyczna; przetwarzanie dokumentów narracyjnych (USG/MRI/TK/kolonoskopia); orkiestracja przez n8n (usunięta w PRD v1.2 — uruchamianie ręczne z terminala); UI/dashboard/wykresy; automatyczny load do BigQuery; dziennik interwencji/stylu życia; RAG, wektorowe bazy, FastAPI/Docker/Cloud Run, MCP server, agenci (to wersje V2–V4 z zarysu).
 
 Jeśli przy okazji innej pracy natkniesz się na plik, fragment kodu lub dokumentu dotyczący **wyłącznie** przetwarzania danych narracyjnych — zgłoś operatorowi do potwierdzenia, nie usuwaj automatycznie. Nie skanuj repo proaktywnie w tym celu, tylko przy okazji.

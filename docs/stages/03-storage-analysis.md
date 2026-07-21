@@ -9,7 +9,7 @@ Trzy równoległe strumienie pracy: (1) walidacja, że magazyn z etapu 2 jest sp
 
 ## Zakres / Definition of Done
 - [x] Kanoniczny NDJSON: płaskie rekordy, schemat pipeline'u strukturalnego zwalidowany — 114/114 rekordów to poprawny JSON z identycznym zestawem kluczy i spójnymi typami per pole (`value`/`reference_low`/`reference_high`: float|None; `unit`/`value_text`/`reference_note`: str|None; reszta: str) — gotowe pod BigQuery bez transformacji. Rozszerzony do 12 kluczy (`reference_note`) po realnym loadzie — patrz Notatki
-- [x] Trend dowolnego markera jednym promptem w Claude Code — zademonstrowane bezpośrednio z NDJSON (hemoglobina: 2020-12-21 → 2023-01-23, 14.1 → 14.9 g/dl). Formalny próg S2 (marker z ≥3 pomiarami) niezweryfikowany na obecnym wolumenie (14 dok., 3 unikalne daty) — pomiar właściwy dla etapu 5 na realnym backfillu
+- [x] Trend dowolnego markera jednym promptem w Claude Code — zademonstrowane bezpośrednio z NDJSON (hemoglobina: 2020-12-21 → 2023-01-23, 14.1 → 14.9 g/dl). Formalny próg S2 (marker z ≥3 pomiarami) niezweryfikowany na obecnym wolumenie (14 dok., 3 unikalne daty) — pomiar właściwy dla etapu 4 na realnym backfillu
 - [x] Porównanie dwóch markerów na osi czasu — zademonstrowane (hemoglobina vs OB, lokalny analogon Fe vs CRP z PRD: marker niedokrwistości vs marker stanu zapalnego)
 - [x] Ręczny load NDJSON do BigQuery bez błędów schematu (test S4) — operator wykonał realny load przez konsolę GCP (schemat 11 kolumn), przeszedł bez błędów. Schemat od tego czasu rozszerzony do 12 kolumn (`reference_note`) — tabela do przeładowania, instrukcja niżej
 - [x] Raport Markdown „do lekarza": trendy markerów — `src/report.py`, realny raport z 114 rekordów: 10 paneli, 72 serie marker/jednostka, strzałki kierunku zmiany; `reference_note` wyświetlana zamiast „—" gdy brak czystego zakresu
@@ -42,9 +42,9 @@ Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, ni
 
 ### Próg S2 (≥3 pomiary) — zbudowany mechanizm, niezmierzony próg
 
-**Decyzja:** trend/porównanie działają i są zademonstrowane na realnych danych (2-punktowe serie), ale formalne domknięcie progu S2 („marker z ≥3 pomiarami") przesunięte do etapu 5.
+**Decyzja:** trend/porównanie działają i są zademonstrowane na realnych danych (2-punktowe serie), ale formalne domknięcie progu S2 („marker z ≥3 pomiarami") przesunięte do etapu 4.
 
-**Dlaczego:** obecny wolumen (14 dok., 3 unikalne daty badań) nie ma ani jednej serii marker+jednostka z 3 różnymi datami — maksimum to 2. To nie wada mechanizmu (zapytanie o trend działa identycznie dla 2 i dla N punktów), tylko naturalny skutek małego wolumenu przed backfillem. Etap 5 i tak ma własny punkt DoD „Pomiar i zapis wyników S1–S4" — właściwe miejsce na formalny test tego konkretnego progu na realnych ~115–120 dokumentach.
+**Dlaczego:** obecny wolumen (14 dok., 3 unikalne daty badań) nie ma ani jednej serii marker+jednostka z 3 różnymi datami — maksimum to 2. To nie wada mechanizmu (zapytanie o trend działa identycznie dla 2 i dla N punktów), tylko naturalny skutek małego wolumenu przed backfillem. Etap 4 i tak ma własny punkt DoD „Pomiar i zapis wyników S1–S4" — właściwe miejsce na formalny test tego konkretnego progu na realnych ~115–120 dokumentach.
 
 **Pułapki:** łatwo pomylić „mechanizm zbudowany i działa" z „kryterium sukcesu spełnione" — to dwa różne twierdzenia. Pierwsze można udowodnić teraz (kodem, na małej próbce), drugie wymaga realnego wolumenu danych, którego jeszcze nie ma.
 
@@ -56,7 +56,7 @@ Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, ni
 
 **Jak działa:** dla każdego pola zbiera się zbiór typów Pythona występujących we wszystkich 114 rekordach (`{type(v).__name__ for v in ...}`) — wynik musi mieć rozmiar ≤2 (typ + `NoneType`). Znaleziono: `value`/`reference_low`/`reference_high` → `float|None`, `unit`/`value_text` → `str|None`, reszta zawsze `str`. Dokładnie to, czego BigQuery oczekuje po polu `NULLABLE`.
 
-**Pułapki:** sam load NDJSON do BigQuery jest świadomie ręczny (PRD: „Automatyczny load do BigQuery" poza zakresem V1) — wymaga projektu/kont GCP, których nie mam. Ten etap dostarcza walidację i pewność, że load się powinien udać, nie wykonuje go za operatora. Automatyzacja w n8n (V1.1+?) jest technicznie tania (gotowy node BigQuery), ale to zmiana zakresu — wymaga aktualizacji PRD, nie robimy tego po cichu.
+**Pułapki:** sam load NDJSON do BigQuery jest świadomie ręczny (PRD: „Automatyczny load do BigQuery" poza zakresem V1) — wymaga projektu/kont GCP, których nie mam. Ten etap dostarcza walidację i pewność, że load się powinien udać, nie wykonuje go za operatora. Automatyzacja (np. `bq load` z terminala) to kandydat na przyszłość — zmiana zakresu, wymaga aktualizacji PRD, nie robimy tego po cichu.
 
 ### Instrukcja: ręczny load `structural.ndjson` do BigQuery (konsola GCP)
 

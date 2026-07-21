@@ -6,12 +6,12 @@ Lokalna platforma do przetwarzania osobistej dokumentacji medycznej z analizą t
 
 - **`docs/prd.md`** — kontrakt Version 1 (zakres, wymagania, kryteria sukcesu)
 - **`docs/roadmap.md`** — backlog wersji V2–V4 z diagramami architektury
-- **`docs/stages/`** — plan implementacji krok po kroku (etapy 00–05)
+- **`docs/stages/`** — plan implementacji krok po kroku (etapy 00–04)
 - **`CLAUDE.md`** — konwencje projektu dla sesji Claude Code
 
 ## Stack
 
-Python (uv) · n8n · Docling · Apple Vision · Claude (abonament Pro)
+Python (uv) · Docling · Apple Vision · BigQuery · Claude (abonament Pro)
 
 ## Uruchomienie
 

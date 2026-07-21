@@ -1,5 +1,7 @@
 # Etap 0 — Setup środowiska
 
+> **Uwaga (PRD v1.2):** n8n został później usunięty z zakresu V1 — lokalny kontener Docker (Linux) nie odpala Apple Vision (macOS). Checkboxy i notatki n8n poniżej to **rzetelny zapis wykonanej pracy** (instancja powstała i **nadal istnieje**, współdzielona z projektem Learning-Plan — `docs/n8n-backup-restore.md`), nie usuwamy ich. W bieżącym V1 pipeline uruchamia operator z terminala; n8n jako kandydat na przyszłość — `docs/roadmap.md`.
+
 ## Cel
 Działające fundamenty: repozytorium git, środowisko Python, lokalny n8n, smoke test `claude -p`.
 

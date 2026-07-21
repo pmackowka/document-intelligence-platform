@@ -292,8 +292,30 @@ def sanitize_alias(out: str) -> str:
     return token if _CODE_RE.fullmatch(token) else "NEEDS_REVIEW"
 
 
+_PII_DIGIT_RUN = re.compile(r"\d{9,}")  # PESEL (11 cyfr) / telefon (9 cyfr) — marker nigdy nie ma tak długiego ciągu
+
+
+def _looks_like_pii(name_raw: str) -> bool:
+    """Ostatnia lokalna zapora tuż przed wysyłką do API (Warstwa 3).
+
+    is_noise() filtruje linie nagłówka/stopki PRZED ekstrakcją (po prefiksie: pesel/adres/pacjent/...);
+    to dodatkowa kontrola na już wyciągniętym stringu, na wypadek gdyby zniekształcony OCR albo
+    rozjechany layout tabeli (udokumentowane w etapie 1) wpuścił fragment nagłówka jako name_raw
+    mimo to. Progi kalibrowane na realnym słowniku: najdłuższy istniejący marker ma 39 znaków/6 słów
+    (`config/aliases.yml`) — 60/8 to bezpieczny margines, nie odetnie prawdziwych kandydatów.
+    """
+    return bool(_PII_DIGIT_RUN.search(name_raw)) or len(name_raw) > 60 or len(name_raw.split()) > 8
+
+
 def propose_alias_haiku(panel: str, name_raw: str) -> str:
-    """Warstwa 3: Haiku proponuje kanoniczny kod dla nieznanej nazwy. Wysyła TYLKO nazwę markera."""
+    """Warstwa 3: Haiku proponuje kanoniczny kod dla nieznanej nazwy. Wysyła TYLKO nazwę markera.
+
+    Kandydat wyglądający kształtem jak PII (patrz _looks_like_pii) nigdy nie trafia do API —
+    wraca NEEDS_REVIEW lokalnie, operator rozstrzyga ręcznie w pending/aliases.yml.
+    """
+    if _looks_like_pii(name_raw):
+        print(f"[BLOCKED] {panel}: kandydat odrzucony przed wysyłką do API (kształt PII) -> NEEDS_REVIEW", flush=True)
+        return "NEEDS_REVIEW"
     prompt = (
         f"Zwróć kanoniczny kod markera laboratoryjnego dla polskiej nazwy "
         f"'{name_raw}' (panel '{panel}'). Preferuj międzynarodowy skrót (np. WBC, CRP), "

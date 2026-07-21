@@ -101,7 +101,7 @@ Wymóg prywatności jest **miękki** — to **nie** jest system klasy medycznej;
 | LLM na N=kilkanaście pomiarów generuje przekonujące hipotezy, nie analizę | Raporty oznaczane jako hipotezy; JSON umożliwia własną weryfikację SQL-em |
 | Jakość OCR na starych skanach/zdjęciach | Klasyfikacja jakości; dokumenty nieczytelne odrzucane świadomie (licznik do S1) |
 | Zatwierdzanie ręczne zniechęci po backfillu | Front-load: słownik nasyca się na pierwszych ~50 dokumentach |
-| Limity abonamentu Pro współdzielone z interaktywną pracą w Claude Code | Po v1.3 wolumen wywołań niski — Warstwa 3 pyta Haiku wyłącznie o nieznane nazwy markerów, a słownik nasyca się szybko (etap 3: 0 nieznanych na 14 dok.); przy wyczerpaniu limitu backfill po prostu zwalnia — świadomie zaakceptowane |
+| Limity abonamentu Pro współdzielone z interaktywną pracą w Claude Code | Po v1.3 wolumen wywołań niski — Warstwa 3 pyta Haiku wyłącznie o nieznane nazwy markerów, a słownik nasyca się szybko (etap 2: 0 nieznanych na 14 dok.); przy wyczerpaniu limitu backfill po prostu zwalnia — świadomie zaakceptowane |
 | Zakresy referencyjne różnią się między laboratoriami | Zakres zapisywany per pomiar (z dokumentu), nie globalnie |
 
 ### Rozstrzygnięte (runda review 1, 2026-07-17)

@@ -1,4 +1,4 @@
-# Etap 7 — Orkiestracja n8n
+# Etap 4 — Orkiestracja n8n
 
 ## Cel
 Spięcie modułów w workflow: nowy dokument → pipeline → zapis → powiadomienie. n8n wyłącznie orkiestruje — zero logiki biznesowej (reguła z PRD).

@@ -1,4 +1,4 @@
-# Etap 6 — Magazyn NDJSON i analiza trendów
+# Etap 3 — Magazyn NDJSON i analiza trendów
 
 ## Cel
 Warstwa, dla której to wszystko powstało: trwały magazyn z osią czasu i odpytywanie trendów przez Claude Code (S2) + zgodność z BigQuery (S4).

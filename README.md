@@ -5,8 +5,8 @@ Lokalna platforma do przetwarzania osobistej dokumentacji medycznej z analizą t
 ## Dokumentacja
 
 - **`docs/prd.md`** — kontrakt Version 1 (zakres, wymagania, kryteria sukcesu)
-- **`docs/roadmap.md`** — backlog wersji V2–V5 z diagramami architektury
-- **`docs/stages/`** — plan implementacji krok po kroku (etapy 00–08)
+- **`docs/roadmap.md`** — backlog wersji V2–V4 z diagramami architektury
+- **`docs/stages/`** — plan implementacji krok po kroku (etapy 00–05)
 - **`CLAUDE.md`** — konwencje projektu dla sesji Claude Code
 
 ## Stack

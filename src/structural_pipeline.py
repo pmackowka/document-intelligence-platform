@@ -69,10 +69,19 @@ SECTION_MARKERS = {
     key: (name, canon) for name, p in PANELS.items()
     if p.get("format") == "section" for key, canon in p.get("markers", {}).items()
 }
+# Fallback bez podziału na panel/format — WYŁĄCZNIE dla tabel, którym nigdy nie udało się
+# ustalić panelu (nowy lab, tabela bez rozpoznawalnego nagłówka ICD-9). Używany tylko gdy
+# `panel is None` przez cały dokument — jeśli panel JEST znany, ale klucz nie ma w nim wpisu,
+# to nadal trafia do `unknown` (nie zgadujemy między panelami, gdy kontekst jest jednoznaczny).
+ALL_MARKERS = {
+    key: (name, canon) for name, p in PANELS.items()
+    for key, canon in p.get("markers", {}).items()
+}
 
 _NUM = re.compile(r"^[<>]?\s*\d+(?:[.,]\d+)?$")       # cała komórka to liczba: 13.2, 0,18, <1
 _ICD9 = re.compile(r"ICD-9:\s*([A-Z]\d+)")            # ścisły: kod panelu w komórce tabeli
 _ICD9_LOOSE = re.compile(r"\(ICD-9:\s*([^)]*)\)")     # luźny: dowolny kod inline (też "-", "055")
+_BRACKET_CODE = re.compile(r"^\[[A-Z0-9]+\]\s*\S")    # inny lab, wewnętrzny kod jako PREFIKS: "[L23] Fosforany"
 _RANGE = re.compile(r"^(\d+(?:[.,]\d+)?)\s+(\d+(?:[.,]\d+)?)(?:\s+[HLNhln*])?$")  # "115,00 190,00 H"
 _DATE = re.compile(r"Data wykonania\s*:?\s*(\d{2})\.(\d{2})\.(\d{4})")
 
@@ -252,12 +261,17 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
             if not key or is_noise(name_raw):
                 continue
             marker = resolve(panel, key)
-            if marker is None:
-                unknown.append((panel or "?", name_raw))
+            row_panel = panel
+            if marker is None and panel is None:  # tabela bez ustalonego panelu -> spróbuj po wszystkich
+                hit = ALL_MARKERS.get(key)         # NIE nadpisuje `panel` globalnie dla reszty
+                if hit:                             # dokumentu — każdy wiersz próbuje fallback osobno,
+                    row_panel, marker = hit          # żeby jeden trafiony marker nie "zablokował"
+            if marker is None:                      # fallbacku dla innych paneli w tej samej tabeli
+                unknown.append((row_panel or "?", name_raw))
                 continue
             value = to_num(cells[1])
             records.append(_record(
-                panel, marker, name_raw, value,
+                row_panel, marker, name_raw, value,
                 None if value is not None else (cells[1] or None),
                 canon_unit(cells[2]) if len(cells) > 2 else None,
                 to_num(cells[3]) if len(cells) > 3 else None,
@@ -287,6 +301,20 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
             section_active = True
             if name_before and not is_noise(name_before) and _valid_code(code):
                 unknown.append((panel or "?", name_before))
+            continue
+
+        # --- linia z prefiksem '[XXX]': wewnętrzny kod innego labu, nie (ICD-9: ...) ---
+        # Zawsze pojedynczy marker (ten lab nie używa tej notacji na nagłówki paneli/sekcji),
+        # więc — inaczej niż wyżej — nie ma gałęzi (a)/(b) na dopasowanie panelu.
+        if _BRACKET_CODE.match(stripped) and not is_noise(stripped):
+            section_active = True
+            key = norm(stripped)
+            hit = resolve_section(key)
+            if hit:
+                panel, canon = hit
+                anchors.append((i, panel, canon, stripped, None))
+            else:
+                unknown.append((panel or "?", stripped))
             continue
 
         # --- luźna linia w aktywnej sekcji: potencjalny marker-dziecko (nazwa rozstrzyga) ---

@@ -34,7 +34,7 @@ Zasady przekrojowe:
 
   Podfoldery `data/` istnieją tylko lokalnie (git nie śledzi ignorowanych ścieżek) — kod pipeline'u tworzy je przy starcie (`mkdir -p`).
 
-  Ingest ląduje w `data/raw/structural/` — wyłącznie ręczny upload przez n8n, bez klasyfikacji (V1 po zawężeniu v1.3 obsługuje wyłącznie dokumenty strukturalne, nie ma czego routować). Brak konektora Google Drive (usunięty w PRD v1.1).
+  Ingest ląduje w `data/raw/structural/` — wyłącznie ręczny upload przez n8n, bez klasyfikacji (V1 obsługuje wyłącznie dokumenty strukturalne, nie ma czego routować). Brak konektora Google Drive (usunięty w PRD v1.1).
 
 ## Stack i ograniczenia techniczne
 
@@ -67,4 +67,4 @@ Etap skończony = wszystkie checkboxy odhaczone lub świadomie skreślone z adno
 
 ## Out of scope V1 (nie implementuj bez zmiany PRD)
 
-Domeny inne niż medyczna; przetwarzanie dokumentów narracyjnych (USG/MRI/TK/kolonoskopia — usunięte w PRD v1.3); UI/dashboard/wykresy; automatyczny load do BigQuery; dziennik interwencji/stylu życia; RAG, wektorowe bazy, FastAPI/Docker/Cloud Run, MCP server, agenci (to wersje V2–V4 z zarysu).
+Domeny inne niż medyczna; przetwarzanie dokumentów narracyjnych (USG/MRI/TK/kolonoskopia); UI/dashboard/wykresy; automatyczny load do BigQuery; dziennik interwencji/stylu życia; RAG, wektorowe bazy, FastAPI/Docker/Cloud Run, MCP server, agenci (to wersje V2–V4 z zarysu).

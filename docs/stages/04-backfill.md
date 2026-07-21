@@ -33,6 +33,18 @@ Trzy strumienie pracy: (1) domknięcie brakujących mechanizmów DoD w kodzie (l
 
 Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, nie log czynności. -->
 
+### OTWARTE — nowy lab, kod markera w nawiasach kwadratowych `[XXX]`, nie `(ICD-9: XXX)`
+
+**Status: NIEDOKOŃCZONE.** Zacznij tutaj następną sesję nad etapem 4, zanim cokolwiek innego.
+
+**Decyzja (do zrobienia, nie zrobiona):** parser (`parse_document()`, `_ICD9_LOOSE` regex) rozpoznaje wyłącznie inline kod w formacie `(ICD-9: kod)`. Część dokumentów z pierwszego realnego backfillu (39 plików: `188572094.pdf`, `190111920.pdf`, `Pierwiastki w krwi.pdf`, `Pierwiastki w moczu.pdf`, jeden marker w `Lipidogram.pdf`, jeden w drugim pliku endokrynologicznym) koduje markery w nawiasach KWADRATOWYCH: `[L23] Fosforany`, `[N45] Potas w moczu` itd. Ten format nigdy nie ustawia `section_active = True`, więc żadna linia w takim dokumencie nie trafia do sprawdzenia słownika — **niezależnie od tego, czy alias istnieje w config**.
+
+**Dlaczego to nie jest "brakujący alias":** 47 aliasów dla dokładnie tych markerów już jest zatwierdzonych w `config/aliases.yml` (commit `b13e11a`) — pochodzą z realnych propozycji Haiku, zweryfikowanych ręcznie (włącznie ze sprawdzeniem, z którego pliku źródłowego pochodzi każdy niepewny przypadek krew/mocz). Mimo to po dodaniu aliasów i ponownym uruchomieniu pipeline'u te same 51 markerów **nadal** wypada jako nieznane — dowód, że problem jest w rozpoznawaniu formatu kodu, nie w słowniku. Weryfikacja: `data/pending/aliases.yml` (`git diff` niepotrzebny, plik poza gitem) — WSZYSTKIE 51 pozostałych wpisów ma już kod inny niż `NEEDS_REVIEW` (bo mechanizm wznawiania z etapu 4 poprawnie je odzyskał), tylko nigdy nie docierają do sprawdzenia w `config/`.
+
+**Plan naprawy (nierozpoczęty):** dodać do `parse_document()` drugi wzorzec rozpoznawania inline-kodu, analogiczny do `_ICD9_LOOSE = re.compile(r"\(ICD-9:\s*([^)]*)\)")`, ale dla `\[([A-Z0-9]+)\]` — i podpiąć go w tym samym miejscu co obecny (ustawia `section_active = True`, próbuje `resolve_section()` po nazwie, w razie porażki flaguje jako `unknown`). Nazwy markerów w `pending`/`config` już zawierają prefiks `[XXX]` jako część klucza (bo tak wyszły z parsera) — po naprawie mogą wymagać przepisania na czystą nazwę bez nawiasu, do zdecydowania przy implementacji (zależy, czy nowy regex ma wycinać prefiks z `name_raw`, czy zostawiać jak dziś).
+
+**Stan po zatrzymaniu (koniec sesji, limit czasu):** `data/store/structural.ndjson` ma 164 rekordy (z 149 przed tą sesją). `data/pending/aliases.yml` ma 51 wpisów czekających — bezpieczne, nic nie zgubione, zadziałają automatycznie po naprawie regexu bez ponownego pytania Haiku (mechanizm wznawiania już to obsługuje).
+
 ### Ile dokumentów w pierwszej partii — nie zgadywanie, tylko PRD
 
 **Decyzja:** pierwsza partia backfillu to ~50 dokumentów, nie cały szacowany wolumen (~100–120) naraz.

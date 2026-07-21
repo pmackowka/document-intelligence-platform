@@ -6,7 +6,7 @@ Spięcie modułów w workflow: nowy dokument → pipeline → zapis → powiadom
 ## Zakres / Definition of Done
 - [ ] Trigger ręczny (upload) — jedyna ścieżka ingestu (PRD v1.1)
 - [ ] ~~Konektor folderu Google Drive — ścieżka automatyczna~~ — skreślone (PRD v1.1: ingest wyłącznie ręczny, bez konektora Drive)
-- [ ] Wywołanie modułu Python (pipeline strukturalny) przez Execute Command — pojedyncza ścieżka, bez routingu/klasyfikacji (zbędne po zawężeniu V1 do jednej klasy dokumentów, PRD v1.3)
+- [ ] Wywołanie modułu Python (pipeline strukturalny) przez Execute Command — pojedyncza ścieżka, bez routingu/klasyfikacji
 - [ ] Powiadomienie o dokumentach czekających na zatwierdzenie w `pending/`
 - [ ] Nowy dokument przechodzi end-to-end w ≤15 min pracy operatora (test S3)
 

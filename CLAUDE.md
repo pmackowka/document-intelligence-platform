@@ -14,8 +14,6 @@ Lokalna platforma do przetwarzania osobistej dokumentacji medycznej (~390 plikó
 
 Jeden pipeline — dane strukturalne (badania krwi/moczu): OCR → standaryzacja (dictionary mapping z `aliases.yml` → regex na wartości → weryfikacja LLM nieznanych nazw) → kanoniczny JSON z jednostkami i zakresami referencyjnymi.
 
-> Pipeline narracyjny (opisy USG/MRI/TK: anonimizacja Presidio + ekstrakcja ustaleń LLM) był częścią V1 do etapu 5, usunięty w PRD v1.3 — patrz changelog `docs/prd.md`.
-
 Zasady przekrojowe:
 
 - **Human-in-the-loop obowiązkowy**: propozycje aliasów trafiają do `pending/*.yml`; pipeline czyta wyłącznie zatwierdzone wpisy. Operator zatwierdza edytując pliki w Claude Code.
@@ -26,13 +24,13 @@ Zasady przekrojowe:
 
   | Ścieżka | Zawartość | Etap potoku | Git | Kiedy zapełniane |
   |---|---|---|---|---|
-  | `config/` | YAML domenowy (`aliases`, `units`, `marker_labels`, `reference_ranges`, `laboratories`) | — | wersjonowany | etap 3 |
+  | `config/` | YAML domenowy (`aliases`, `units`, `marker_labels`, `reference_ranges`, `laboratories`) | — | wersjonowany | etap 2 |
   | `src/` | kod Python (logika biznesowa) | — | wersjonowany | od etapu 0 |
   | `data/raw/structural/` | surowe dok. strukturalne (krew/mocz) | **surowy** | lokalnie | ingest (próbka: etap 1) |
   | `data/interim/` | wyjście pośrednie: OCR-owany MD/JSON | **pośredni** | lokalnie | etap 1 (OCR) |
-  | `data/pending/` | propozycje aliasów do zatwierdzenia | kontrola (HITL) | lokalnie | etap 3 |
-  | `data/store/` | magazyn NDJSON — źródło prawdy, BigQuery-ready | **finalny — dane** | lokalnie | etap 3, 8 |
-  | `data/reports/` | **finalne** raporty Markdown (trendy, na wizytę) | **finalny — raport** | lokalnie | etap 6 |
+  | `data/pending/` | propozycje aliasów do zatwierdzenia | kontrola (HITL) | lokalnie | etap 2 |
+  | `data/store/` | magazyn NDJSON — źródło prawdy, BigQuery-ready | **finalny — dane** | lokalnie | etap 2, 5 |
+  | `data/reports/` | **finalne** raporty Markdown (trendy, na wizytę) | **finalny — raport** | lokalnie | etap 3 |
 
   Podfoldery `data/` istnieją tylko lokalnie (git nie śledzi ignorowanych ścieżek) — kod pipeline'u tworzy je przy starcie (`mkdir -p`).
 
@@ -48,9 +46,7 @@ Zasady przekrojowe:
 
 ## Praca etapami — `docs/stages/`
 
-Implementacja podzielona na etapy `00`–`08`; każdy plik w `docs/stages/` ma sekcje: **Cel**, **Zakres / Definition of Done** (checkboxy = kroki) i **Notatki**. Kolejność plików = kolejność pracy.
-
-Numeracja ma świadome luki — **02, 04, 05 nie istnieją**: dotyczyły pipeline'u narracyjnego, usuniętego z V1 w PRD v1.3. Pierwszy plik z nieodhaczonym checkboxem nadal wyznacza bieżący etap, po prostu pomijając brakujące numery.
+Implementacja podzielona na etapy `00`–`05`; każdy plik w `docs/stages/` ma sekcje: **Cel**, **Zakres / Definition of Done** (checkboxy = kroki) i **Notatki**. Kolejność plików = kolejność pracy.
 
 **Workflow obowiązkowy w każdej sesji implementacyjnej:**
 

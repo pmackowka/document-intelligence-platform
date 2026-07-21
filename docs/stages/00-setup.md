@@ -5,7 +5,7 @@ Działające fundamenty: repozytorium git, środowisko Python, lokalny n8n, smok
 
 Sedno: postawić i **zweryfikować** warstwę, na której stanie cała reszta — zanim napiszemy pierwszą linijkę logiki biznesowej. Każdy element to prerekwizyt czegoś konkretnego dalej:
 - **git + prywatny remote** — PRD jako living document (commit przy każdej zmianie zakresu); treść medyczna nigdy w repo;
-- **środowisko Python (uv)** — reprodukowalny stack pod Docling/Presidio/spaCy z jednego locka;
+- **środowisko Python (uv)** — reprodukowalny stack pod Docling z jednego locka;
 - **n8n lokalnie + MCP** — orkiestrator osiągalny z Claude Code, budowany kodem, nie klikaniem;
 - **smoke test `claude -p`** — dowód, że programistyczna ścieżka do LLM (headless, na abonamencie Pro) działa, zanim się na niej oprzemy.
 
@@ -42,7 +42,7 @@ Sedno: postawić i **zweryfikować** warstwę, na której stanie cała reszta �
 
 ### Środowisko Python (uv)
 
-**Decyzja:** `uv` zamiast `pip` + `venv` + `poetry`, instalacja przez Homebrew. Zależności domenowe (Docling, Presidio, spaCy) **nie** teraz — dojdą w etapach 1 i 4.
+**Decyzja:** `uv` zamiast `pip` + `venv` + `poetry`, instalacja przez Homebrew. Zależność domenowa (Docling) **nie** teraz — dojdzie w etapie 1.
 
 **Dlaczego:** jedno narzędzie (środowisko, zależności, lockfile, wersja Pythona), szybkie przy ciężkim stacku; `uv.lock` w repo → reprodukowalne środowisko z klona jedną komendą.
 
@@ -90,9 +90,9 @@ Sedno: postawić i **zweryfikować** warstwę, na której stanie cała reszta �
 
 ### Podział odpowiedzialności: Python vs. n8n
 
-**Decyzja:** cała logika biznesowa (OCR, standaryzacja, anonimizacja, ekstrakcja) w wersjonowanych plikach `.py`; n8n tylko orkiestruje (trigger, kolejność, retry). Node n8n nigdy nie trzyma logiki.
+**Decyzja:** cała logika biznesowa (OCR, standaryzacja) w wersjonowanych plikach `.py`; n8n tylko orkiestruje (trigger, kolejność, retry). Node n8n nigdy nie trzyma logiki.
 
-**Dlaczego:** kod w plikach jest wersjonowany, testowalny i przenośny (przeżyje zmianę n8n → Airflow/cron); logika w node'ach żyje w SQLite poza gitem, bez testów. Ciężkie biblioteki (Docling / Presidio / spaCy) wymagają natywnego venv, którego sandbox runnera n8n nie uniesie. Regułę „nic do API przed Presidio" audytujesz w jednym miejscu w kodzie.
+**Dlaczego:** kod w plikach jest wersjonowany, testowalny i przenośny (przeżyje zmianę n8n → Airflow/cron); logika w node'ach żyje w SQLite poza gitem, bez testów. Ciężka biblioteka (Docling) wymaga natywnego venv, którego sandbox runnera n8n nie uniesie. Regułę „do API idzie wyłącznie nazwa markera, nigdy pełny dokument" audytujesz w jednym miejscu w kodzie.
 
 **Pułapka:** „zero logiki w n8n" jest odrobinę surowsze niż konieczne — świadomie, jako bariera przed *logic creep*. Kanoniczny wzorzec: orkiestrator cienki, ciężka praca w wersjonowanym kodzie (tak samo Airflow: DAG wiąże taski, task woła kod).
 

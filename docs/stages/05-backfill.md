@@ -1,4 +1,4 @@
-# Etap 8 — Backfill i weryfikacja Success Criteria
+# Etap 5 — Backfill i weryfikacja Success Criteria
 
 ## Cel
 Przetworzenie dokumentów strukturalnych z archiwum ~390 plików (szacunkowo ~30%, czyli ok. 115–120 — reszta to narracyjne, poza zakresem V1 po PRD v1.3) i pomiar S1–S4 z PRD. Rozłożone w czasie — tempo ograniczone limitami abonamentu Pro (~3 dok./dzień wystarcza).

@@ -1,4 +1,4 @@
-# Etap 3 — Pipeline strukturalny (standaryzacja)
+# Etap 2 — Pipeline strukturalny (standaryzacja)
 
 ## Cel
 Szybka wygrana z PRD: badania krwi/moczu/biochemii do kanonicznego JSON. Wejściem jest OCR-owany markdown (etap 1), wyjściem płaskie rekordy NDJSON `{panel, marker, value, value_text, unit, reference_low/high, exam_date, source_file}` — jeden marker = jeden rekord, gotowy do trendów.

@@ -31,6 +31,12 @@ OCR_CACHE = ROOT / "data" / "interim" / "structural-ocr"
 STORE = ROOT / "data" / "store"
 PENDING = ROOT / "data" / "pending"
 
+# Etap 4 (backfill): próg odrzucenia "nieczytelny OCR". Kalibrowany na realnych danych —
+# najkrótszy prawdziwy dokument w próbce etapu 2 miał 710 znaków; puste/nieczytelne
+# dokumenty (placeholder OCR) obserwowane w projekcie miały 14-394 znaków. 500 leży
+# bezpiecznie w przerwie między obiema grupami (margines ~200 w obie strony).
+MIN_OCR_CHARS = 500
+
 # --- normalizacja klucza: lowercase, bez polskich diakrytyków, bez gwiazdek, spacje zwarte ---
 _DIACR = str.maketrans("ąćęłńóśźż", "acelnoszz")
 
@@ -346,6 +352,23 @@ def ocr_markdown(doc: Path) -> str:
     return _ocr_markdown(doc, OCR_CACHE)
 
 
+def load_existing_proposals(path: Path) -> dict[tuple[str, str], str]:
+    """Wczytuje pending/aliases.yml z poprzedniego (możliwe że przerwanego) runu.
+
+    Klucz: (panel, znormalizowana nazwa) -> już zaproponowany kod. Pozwala Warstwie 3
+    ominąć ponowne pytanie Haiku o marker, który już czeka na zatwierdzenie — bez tego
+    przerwany w połowie backfill marnowałby wywołania API przy każdym wznowieniu.
+    """
+    if not path.exists():
+        return {}
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    lookup = {}
+    for panel, markers in (data.get("pending_panels") or {}).items():
+        for name, code in (markers or {}).items():
+            lookup[(panel, norm(name))] = code
+    return lookup
+
+
 def main() -> int:
     docs = sorted(p for p in RAW.iterdir() if p.is_file() and p.suffix.lower() in DOC_EXTS) if RAW.exists() else []
     if not docs:
@@ -354,13 +377,18 @@ def main() -> int:
     STORE.mkdir(parents=True, exist_ok=True)
     PENDING.mkdir(parents=True, exist_ok=True)
 
-    all_records, all_unknown = [], {}
-    for doc in docs:
-        recs, unknown = parse_document(ocr_markdown(doc), doc.stem)
+    all_records, all_unknown, rejected = [], {}, []
+    for i, doc in enumerate(docs, 1):
+        text = ocr_markdown(doc)
+        if len(text) < MIN_OCR_CHARS:
+            rejected.append(doc.name)
+            print(f"[{i}/{len(docs)}] {doc.name[:40]:40s} ODRZUCONY — OCR {len(text)} znaków (< {MIN_OCR_CHARS})", flush=True)
+            continue
+        recs, unknown = parse_document(text, doc.stem)
         all_records.extend(recs)
         for panel, name in unknown:
             all_unknown.setdefault((panel, norm(name)), (panel, name))
-        print(f"{doc.name[:46]:46s} rekordów={len(recs):3d} nieznanych={len(unknown):2d}", flush=True)
+        print(f"[{i}/{len(docs)}] {doc.name[:40]:40s} rekordów={len(recs):3d} nieznanych={len(unknown):2d}", flush=True)
 
     # zapis NDJSON (dev: nadpisujemy; produkcyjnie append-only)
     out = STORE / "structural.ndjson"
@@ -368,14 +396,25 @@ def main() -> int:
         for r in all_records:
             fh.write(json.dumps(r, ensure_ascii=False) + "\n")
     print(f"\nZapisano {len(all_records)} rekordów -> {out}")
+    if rejected:
+        print(f"Odrzuconych (nieczytelny OCR): {len(rejected)}/{len(docs)} -> {', '.join(rejected)}")
 
-    # Warstwa 3: propozycje aliasów dla nieznanych -> pending/
+    # Warstwa 3: propozycje aliasów dla nieznanych -> pending/ (odporne na wznowienie po przerwaniu)
+    pend = PENDING / "aliases.yml"
     if all_unknown:
+        existing = load_existing_proposals(pend)
+        reused = 0
         print(f"Warstwa 3: {len(all_unknown)} nieznanych nazw -> Haiku proponuje aliasy...")
         proposals = {}
         for panel, name in all_unknown.values():
-            proposals.setdefault(panel, {})[name] = propose_alias_haiku(panel, name)
-        pend = PENDING / "aliases.yml"
+            key = (panel, norm(name))
+            if key in existing:
+                code, reused = existing[key], reused + 1
+            else:
+                code = propose_alias_haiku(panel, name)
+            proposals.setdefault(panel, {})[name] = code
+        if reused:
+            print(f"  (w tym {reused} odzyskanych z poprzedniego runu — bez ponownego pytania Haiku)")
         pend.write_text(yaml.safe_dump({"pending_panels": proposals}, allow_unicode=True, sort_keys=False),
                         encoding="utf-8")
         print(f"Propozycje -> {pend} (operator zatwierdza, przenosząc do config/aliases.yml)")

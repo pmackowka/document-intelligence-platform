@@ -102,6 +102,7 @@ panels:
       "alt": "ALT"
       "ast": "AST"
       "mocznik": "urea"
+      "bilirubina wolna (posrednia)": "BIL_IND"
       "kreatynina": "creatinine"
       "egfr": "eGFR"
       "kwas moczowy": "uric_acid"

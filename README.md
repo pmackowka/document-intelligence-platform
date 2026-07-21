@@ -11,7 +11,7 @@ Lokalna platforma do przetwarzania osobistej dokumentacji medycznej z analizą t
 
 ## Stack
 
-Python (uv) · n8n · Docling · Apple Vision · Microsoft Presidio · Claude (abonament Pro)
+Python (uv) · n8n · Docling · Apple Vision · Claude (abonament Pro)
 
 ## Uruchomienie
 

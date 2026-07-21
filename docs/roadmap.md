@@ -16,8 +16,7 @@ Pełny zakres i wymagania: `docs/prd.md`. Diagram poglądowy — wszystkie kolej
 
 ```mermaid
 flowchart TD
-    IN["Nowy dokument<br>upload ręczny"] --> N8N["n8n<br>wyłącznie orkiestracja"]
-    N8N --> OCR["OCR: Docling<br>+ Apple Vision dla zdjęć"]
+    IN["Nowy dokument<br>upload ręczny do data/raw/structural"] --> OCR["OCR: Docling<br>+ Apple Vision dla zdjęć"]
     OCR --> ST["Standaryzacja<br>aliases.yml → regex → units.yml"]
     ST --> AV["Weryfikacja nieznanych nazw<br>claude -p --model haiku"]
     AV --> PA["pending/*.yml<br>operator zatwierdza"]
@@ -48,19 +47,20 @@ flowchart LR
 
 ## Version 3 — Przeniesienie do chmury
 
-FastAPI + Docker + Cloud Run; n8n wywołuje endpoint HTTP.
+FastAPI + Docker + Cloud Run; trigger (upload/cron) wywołuje endpoint HTTP.
 
 - **Kompetencje**: API development, cloud deployment.
 - ⚠️ **Konflikt z threat model**: V1 świadomie przyjęła miękką prywatność przy przetwarzaniu lokalnym. Surowe dokumenty medyczne w Cloud Run to inna klasa ryzyka — PRD V3 musi zacząć od rewizji threat model (wariant z pierwotnej dyskusji: self-hosting na Mac mini zamiast chmury publicznej).
+- ⚠️ **Silnik OCR**: Apple Vision jest natywny dla macOS — w kontenerze/chmurze nie zadziała. Przeniesienie wymaga zamiany na silnik serwerowy (Docling z RapidOCR albo zewnętrzne OCR API), z rewizją jakości na polskim.
 
 ```mermaid
 flowchart LR
-    N[n8n] -->|HTTP request| API[FastAPI<br>w kontenerze Docker]
+    T["Trigger<br>upload / cron"] -->|HTTP request| API["FastAPI<br>w kontenerze Docker"]
     subgraph "⚠️ Cloud Run lub Mac mini — decyzja threat model"
-        API --> P[Pipeline Python<br>moduły z V1 bez zmian]
+        API --> P["Pipeline Python<br>moduły z V1, OCR do zamiany"]
     end
-    P --> D[(Magazyn NDJSON)]
-    P --> R[Raporty Markdown]
+    P --> D[("Magazyn NDJSON")]
+    P --> R["Raporty Markdown"]
 ```
 
 ## Version 4 — Architektura agentowa
@@ -87,6 +87,12 @@ flowchart TD
 
 - **Legal** (umowy, NDA, pisma) — uwaga z sesji: to inny pipeline niż medyczny; wspólne tylko OCR (~15% reuse). Realistyczny start: ścieżka „anonymize & ask" bez strukturyzacji.
 - **Finance** (faktury, raporty), **HR** (CV, umowy), **Technical** (instrukcje, manuale).
+
+---
+
+## Do rozważenia (backlog niezwiązany z wersją)
+
+- **n8n na VPS** — n8n usunięty z V1 (PRD v1.2), bo lokalny kontener Docker (Linux) nie odpala Apple Vision (macOS). Uruchomienie n8n na VPS (np. [mikr.us](https://mikr.us/)) obchodzi problem od innej strony: n8n orkiestruje w chmurze, a pipeline biegnie tam z serwerowym silnikiem OCR (nie Apple Vision) — czyli i tak wymaga wcześniej zamiany OCR (ta sama praca co V3). Cel: nauka n8n + orkiestracja produkcyjna. Podjąć tylko gdy będzie na to czas i ochota — nie blokuje żadnej wersji.
 
 ---
 

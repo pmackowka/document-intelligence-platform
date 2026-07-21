@@ -1,9 +1,11 @@
 # PRD: Document Intelligence Platform — Version 1
 
-> Status: **v1.1 — zatwierdzony** (v1.0: 2026-07-17, po sesji sokratejskiej i 2 rundach review). Wszystkie decyzje produktowe zamknięte.
+> Status: **v1.2 — zatwierdzony** (v1.0: 2026-07-17, po sesji sokratejskiej i 2 rundach review). Wszystkie decyzje produktowe zamknięte.
 > Kontrakt dla wszystkich sesji z agentem. Każda zmiana zakresu = aktualizacja tego pliku + commit.
 >
-> **v1.1 (2026-07-18):** ingest tylko ręczny upload przez n8n — usunięty konektor Google Drive.
+> **v1.1 (2026-07-18):** ingest tylko ręczny — usunięty konektor Google Drive.
+>
+> **v1.2 (2026-07-21):** **n8n usunięty z V1.** Powód: architektoniczny rozjazd wykryty przy próbie realnego spięcia (etap 4) — n8n działa w kontenerze Docker (Linux), a silnik OCR to Apple Vision (natywny framework macOS, nie uruchomi się w kontenerze); do tego kontener nie ma dostępu do plików projektu. `Execute Command` z n8n fizycznie nie odpali pipeline'u. Orkiestracja w V1 = uruchomienie ręczne z terminala (`uv run python ...`), spójne z terminal-native charakterem projektu (zero UI). n8n jako narzędzie orkiestracji pozostaje kandydatem na przyszłość — patrz „Do rozważenia" w `docs/roadmap.md` (uruchomienie na VPS zamiast lokalnego Dockera obchodzi problem macOS/Apple Vision, o ile OCR zostanie tam zastąpiony silnikiem serwerowym).
 
 ---
 
@@ -16,7 +18,7 @@ Wieloletnia osobista dokumentacja medyczna (~390 plików, 603 MB: PDF, skany, zd
 
 Wartość rośnie z każdym dokumentem — system gromadzi znormalizowaną historię zdrowia, a nie jednorazowo interpretuje pojedynczy wynik.
 
-**Cel drugorzędny (podporządkowany):** nauka stacku AI Engineering (n8n, Docling, pipeline LLM). Gdy produkt i nauka wchodzą w konflikt, wygrywa produkt — kompletność i wiarygodność danych.
+**Cel drugorzędny (podporządkowany):** nauka stacku AI Engineering (Docling, pipeline LLM, BigQuery). Gdy produkt i nauka wchodzą w konflikt, wygrywa produkt — kompletność i wiarygodność danych.
 
 ## User Persona
 
@@ -39,7 +41,7 @@ Progi zatwierdzone przez właściciela (runda review 1).
 
 ### In scope (must have)
 
-1. **Ingest przez n8n:** wyłącznie ręczny upload przez n8n (operator dodaje pliki sam). Konektor Google Drive **usunięty z V1**. Formaty: PDF, skany (PDF/JPG/PNG), zdjęcia (HEIC/JPG).
+1. **Ingest ręczny:** operator sam dodaje pliki do `data/raw/structural/` (Finder/terminal) i uruchamia pipeline z terminala. Konektor Google Drive **usunięty z V1**. Formaty: PDF, skany (PDF/JPG/PNG), zdjęcia (HEIC/JPG).
 2. **OCR / konwersja:** Docling (główny silnik) + Apple Vision jako backend OCR dla zdjęć. Wyjście pośrednie: Markdown + JSON.
 3. **Pipeline strukturalny — standaryzacja:**
    - Warstwa 1: dictionary mapping (`aliases.yml`) → nazwa kanoniczna markera,
@@ -47,7 +49,7 @@ Progi zatwierdzone przez właściciela (runda review 1).
    - Warstwa 3: weryfikacja LLM dla nieznanych nazw → propozycja aliasu, **operator zatwierdza** przed dopisaniem do słownika (do API idzie wyłącznie nazwa markera — bez PII),
    - normalizacja jednostek (`units.yml`) i zakresów referencyjnych do `reference_low`/`reference_high`.
 4. **Trwały magazyn wyników** z osią czasu — źródło prawdy: katalog **NDJSON**, płaskie rekordy, append-only (decyzja: bez SQLite przy tej skali).
-5. **Mechanika zatwierdzania (plikowa):** pipeline zapisuje propozycje aliasów do `pending/*.yml`; operator przegląda i zatwierdza w Claude Code (edycja pliku, przeniesienie do approved); pipeline czyta wyłącznie zatwierdzone wpisy. Bez n8n forms, bez UI.
+5. **Mechanika zatwierdzania (plikowa):** pipeline zapisuje propozycje aliasów do `pending/*.yml`; operator przegląda i zatwierdza w Claude Code (edycja pliku, przeniesienie do approved); pipeline czyta wyłącznie zatwierdzone wpisy. Bez UI.
 6. **Wyjścia:**
    - kanoniczny **NDJSON** (płaskie rekordy, schemat BigQuery-ready),
    - konsumpcja: Claude Code w terminalu czyta pliki; analiza trendów/porównań markerów przez prompt.
@@ -61,14 +63,15 @@ Progi zatwierdzone przez właściciela (runda review 1).
 - Dziennik interwencji/stylu życia (dieta, suplementy, leki) — korelacje z kontekstem życiowym tylko przez ręczne dopisanie w prompcie analizy. Kandydat na V1.1.
 - Jakiekolwiek UI / dashboard / wykresy — konsumpcja wyłącznie plikowo + terminal.
 - Automatyczny load do BigQuery (format ma być gotowy, load ręczny).
-- Konektor Google Drive (auto-pull z folderu) — usunięty w v1.1; ingest wyłącznie przez ręczny upload w n8n.
+- Konektor Google Drive (auto-pull z folderu) — usunięty w v1.1; ingest wyłącznie ręczny.
+- **Orkiestracja przez n8n** — usunięta w v1.2 (rozjazd Docker/Linux ↔ Apple Vision/macOS, patrz changelog). W V1 pipeline uruchamia operator z terminala. n8n jako kandydat na przyszłość (VPS) — `docs/roadmap.md`.
 - MCP server (V2); FastAPI/Docker/Cloud Run (V3); agenci (V4) — patrz `docs/roadmap.md`.
 - Interpretacja medyczna / rekomendacje zdrowotne jako feature — raporty LLM to materiał do rozmowy z lekarzem, nie diagnoza.
 - Twarde gwarancje prywatności (patrz Threat Model).
 
 ## User Stories
 
-1. Jako właściciel danych chcę wrzucić plik przez n8n, aby system bez mojego dalszego udziału doprowadził go do postaci znormalizowanej i poprosił mnie wyłącznie o zatwierdzenia.
+1. Jako właściciel danych chcę wrzucić plik do folderu i uruchomić pipeline z terminala, aby system bez mojego dalszego udziału doprowadził go do postaci znormalizowanej i poprosił mnie wyłącznie o zatwierdzenia.
 2. Jako analityk chcę zapytać w terminalu „pokaż trend ferrytyny od 2021", aby dostać wartości z datami, jednostką kanoniczną i zakresem referencyjnym.
 3. Jako analityk chcę porównać dwa markery na osi czasu (Fe vs CRP), aby szukać zależności między nimi.
 4. Jako pacjent przygotowujący się do wizyty chcę wygenerować raport Markdown z trendów markerów (np. ferrytyna spadająca od 2021 do 2025), aby omówić go z lekarzem.
@@ -82,10 +85,10 @@ Wymóg prywatności jest **miękki** — to **nie** jest system klasy medycznej;
 ## Tech Constraints
 
 - **Środowisko:** lokalnie, MacBook (macOS). Bez chmury obliczeniowej w V1.
-- **Orkiestracja:** n8n (wyłącznie orkiestracja — zero logiki biznesowej).
+- **Uruchamianie:** ręczne z terminala (`uv run python ...`). Bez dedykowanego orkiestratora w V1 (n8n usunięty w v1.2 — Apple Vision wymaga macOS, nie działa w kontenerze Docker n8n).
 - **Silnik:** Python (OCR, standaryzacja, zapis). Kod i nazwy po angielsku, komentarze po polsku.
 - **OCR:** Docling + Apple Vision.
-- **LLM:** wyłącznie Claude w ramach abonamentu Pro (Anthropic) — **zero zakupu tokenów API**. Wywołania programistyczne przez Claude Code w trybie headless (`claude -p "<prompt>"`), uruchamiane z Pythona/n8n jako komenda shell. Weryfikacja aliasów: Haiku (przez ten sam CLI, `--model`). Test lokalnego modelu (Ollama) — eksperyment poza zakresem V1.
+- **LLM:** wyłącznie Claude w ramach abonamentu Pro (Anthropic) — **zero zakupu tokenów API**. Wywołania programistyczne przez Claude Code w trybie headless (`claude -p "<prompt>"`), uruchamiane z Pythona jako komenda shell. Weryfikacja aliasów: Haiku (przez ten sam CLI, `--model`). Test lokalnego modelu (Ollama) — eksperyment poza zakresem V1.
 - **Dane:** NDJSON płaski, BigQuery-ready; YAML dla wiedzy domenowej; append-only.
 - **Skala:** ~115–120 dokumentów strukturalnych backfill + 2–3/mies. — wydajność nie jest constraintem; priorytet: poprawność i powtarzalność.
 

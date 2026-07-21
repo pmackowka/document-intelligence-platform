@@ -65,6 +65,8 @@ def fmt_range(r: dict) -> str:
         return f"≤{hi:g}"
     if lo is not None:
         return f"≥{lo:g}"
+    if r.get("reference_note"):  # brak czystego zakresu, ale źródło ma wytyczną w prozie — pokaż ją zamiast "—"
+        return r["reference_note"]
     return "—"
 
 

@@ -8,11 +8,11 @@ Sedno: to nie jest budowa silnika zapytań. PRD świadomie nie przewiduje dedyko
 Trzy równoległe strumienie pracy: (1) walidacja, że magazyn z etapu 2 jest spójny na tyle, by bezbłędnie załadować się do BigQuery (typy i klucze pól, nie tylko poprawność JSON per linia); (2) dowód, że trend/porównanie działają „przez prompt", bez dedykowanego skryptu; (3) `src/report.py` — jedyny realny artefakt kodu tego etapu, bo User Story 4 z PRD chce gotowego pliku Markdown „na wizytę", nie tylko odpowiedzi w czacie.
 
 ## Zakres / Definition of Done
-- [x] Kanoniczny NDJSON: płaskie rekordy, schemat pipeline'u strukturalnego zwalidowany — 114/114 rekordów to poprawny JSON z identycznym zestawem 11 kluczy i spójnymi typami per pole (`value`/`reference_low`/`reference_high`: float|None; `unit`/`value_text`: str|None; reszta: str) — gotowe pod BigQuery bez transformacji
+- [x] Kanoniczny NDJSON: płaskie rekordy, schemat pipeline'u strukturalnego zwalidowany — 114/114 rekordów to poprawny JSON z identycznym zestawem kluczy i spójnymi typami per pole (`value`/`reference_low`/`reference_high`: float|None; `unit`/`value_text`/`reference_note`: str|None; reszta: str) — gotowe pod BigQuery bez transformacji. Rozszerzony do 12 kluczy (`reference_note`) po realnym loadzie — patrz Notatki
 - [x] Trend dowolnego markera jednym promptem w Claude Code — zademonstrowane bezpośrednio z NDJSON (hemoglobina: 2020-12-21 → 2023-01-23, 14.1 → 14.9 g/dl). Formalny próg S2 (marker z ≥3 pomiarami) niezweryfikowany na obecnym wolumenie (14 dok., 3 unikalne daty) — pomiar właściwy dla etapu 5 na realnym backfillu
 - [x] Porównanie dwóch markerów na osi czasu — zademonstrowane (hemoglobina vs OB, lokalny analogon Fe vs CRP z PRD: marker niedokrwistości vs marker stanu zapalnego)
-- [ ] Ręczny load NDJSON do BigQuery bez błędów schematu (test S4) — walidacja zgodności zrobiona (patrz wyżej); sam load wymaga projektu/kont GCP operatora — do wykonania przez właściciela
-- [x] Raport Markdown „do lekarza": trendy markerów — `src/report.py`, realny raport z 114 rekordów: 10 paneli, 72 serie marker/jednostka, strzałki kierunku zmiany
+- [x] Ręczny load NDJSON do BigQuery bez błędów schematu (test S4) — operator wykonał realny load przez konsolę GCP (schemat 11 kolumn), przeszedł bez błędów. Schemat od tego czasu rozszerzony do 12 kolumn (`reference_note`) — tabela do przeładowania, instrukcja niżej
+- [x] Raport Markdown „do lekarza": trendy markerów — `src/report.py`, realny raport z 114 rekordów: 10 paneli, 72 serie marker/jednostka, strzałki kierunku zmiany; `reference_note` wyświetlana zamiast „—" gdy brak czystego zakresu
 
 ## Notatki
 <!-- Grupuj po temacie, nie po dacie (chronologię trzyma git). Każdy podpunkt
@@ -62,34 +62,44 @@ Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, ni
 
 **Decyzja:** load przez UI konsoli GCP (Create table → Upload), nie `bq` CLI — operator woli klikać, ma pełną kontrolę nad każdym krokiem i widzi błędy bezpośrednio w przeglądarce.
 
-**Jak działa:** krok po kroku —
+**Jak działa:** pierwszy load (schemat 11 kolumn) przeszedł bez błędów. Schemat od tego czasu rozszerzony o `reference_note` (12. kolumna, patrz notatka „reference_note..." niżej) — tabelę trzeba przeładować od zera, BigQuery nie dokłada kolumn do istniejącej tabeli przez UI uploadu.
 
-1. Otwórz [console.cloud.google.com/bigquery](https://console.cloud.google.com/bigquery), wybierz właściwy projekt (górny pasek).
-2. W panelu Explorer kliknij swój projekt → **View actions** (⋮) → **Create dataset**, jeśli jeszcze nie masz datasetu na dane zdrowotne (np. `health_data`). Lokalizacja dowolna, ale ustaw raz i trzymaj się jej dla kolejnych loadów.
-3. Kliknij ⋮ przy datasecie → **Create table**.
-4. **Source**: „Upload" → **Select file** → wskaż lokalnie `data/store/structural.ndjson` (ścieżka: `/Users/p/Documents/dev/Document-Intelligence-Platform/data/store/structural.ndjson`).
-5. **File format**: `JSONL (Newline delimited JSON)` — NIE zwykły „JSON".
-6. **Destination**: Table name np. `structural_markers`.
-7. **Schema**: odznacz „Auto detect" i wybierz **Edit as text**, wklej schemat poniżej — bezpieczniejsze niż autodetekcja (np. `value` mogłoby zostać źle rozpoznane jako INTEGER, gdyby akurat wszystkie próbki w pliku były liczbami całkowitymi):
+**Krok 0 — usuń starą tabelę (dane + schemat):** w konsoli GCP → **BigQuery Studio** → nowe okno **SQL query** → wklej i uruchom (podmień `projekt.dataset.tabela` na realną nazwę):
 
-   ```json
-   [
-     {"name": "record_type", "type": "STRING", "mode": "REQUIRED"},
-     {"name": "panel", "type": "STRING", "mode": "REQUIRED"},
-     {"name": "marker", "type": "STRING", "mode": "REQUIRED"},
-     {"name": "marker_raw", "type": "STRING", "mode": "REQUIRED"},
-     {"name": "value", "type": "FLOAT", "mode": "NULLABLE"},
-     {"name": "value_text", "type": "STRING", "mode": "NULLABLE"},
-     {"name": "unit", "type": "STRING", "mode": "NULLABLE"},
-     {"name": "reference_low", "type": "FLOAT", "mode": "NULLABLE"},
-     {"name": "reference_high", "type": "FLOAT", "mode": "NULLABLE"},
-     {"name": "exam_date", "type": "DATE", "mode": "NULLABLE"},
-     {"name": "source_file", "type": "STRING", "mode": "REQUIRED"}
-   ]
-   ```
+```sql
+DROP TABLE `projekt.dataset.structural_markers`;
+```
 
-8. Sekcja **Advanced options** — zostaw domyślne (bez partycjonowania/klastrowania na tę skalę danych).
-9. **Create table**. Po chwili sprawdź wynik: sukces = tabela pojawia się w Explorerze z 114 wierszami (Preview / Details → Table info → „Number of rows"). Błąd = czerwony komunikat na dole ekranu z dokładnym opisem (np. niezgodność typu w konkretnej linii) — wklej mi go, jeśli się pojawi.
+To kasuje tabelę razem ze schematem i wszystkimi wierszami — nieodwracalne, ale bezpieczne, bo źródło prawdy to `data/store/structural.ndjson`, nie sama tabela. Alternatywnie: w Explorerze kliknij ⋮ przy tabeli → **Delete** → potwierdź nazwą tabeli.
 
-**Pułapki:** `exam_date` w schemacie jako `DATE` (nie `STRING`) — pole ma zawsze format `YYYY-MM-DD` (patrz `structural_pipeline.py::exam_date`), więc BigQuery przyjmie je natywnie i od razu pozwoli na zapytania zakresowe po dacie, bez rzutowania w SQL. Jeśli kiedyś pojawi się rekord bez `exam_date`, `NULLABLE` to obsłuży bez błędu.
+**Krok 1+ — załaduj od nowa:** ⋮ przy datasecie → **Create table** → Source „Upload" → plik `data/store/structural.ndjson` → **File format**: `JSONL (Newline delimited JSON)` → Table name jak poprzednio (np. `structural_markers`) → **Schema**: odznacz „Auto detect", **Edit as text**, wklej (12 kolumn — dodana `reference_note`):
+
+```json
+[
+  {"name": "record_type", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "panel", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "marker", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "marker_raw", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "value", "type": "FLOAT", "mode": "NULLABLE"},
+  {"name": "value_text", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "unit", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "reference_low", "type": "FLOAT", "mode": "NULLABLE"},
+  {"name": "reference_high", "type": "FLOAT", "mode": "NULLABLE"},
+  {"name": "reference_note", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "exam_date", "type": "DATE", "mode": "NULLABLE"},
+  {"name": "source_file", "type": "STRING", "mode": "REQUIRED"}
+]
+```
+
+**Pułapki:** `exam_date` jako `DATE` (nie `STRING`) — format źródła zawsze `YYYY-MM-DD` (`structural_pipeline.py::exam_date`), więc BigQuery przyjmie natywnie, bez rzutowania w SQL przy zapytaniach zakresowych.
+
+### `reference_note` — surowa proza zamiast utraty progu referencyjnego
+
+**Decyzja:** `parse_section_chunk` (Warstwa 2) dostał 6. wartość zwracaną — `note`. Wypełnia się WYŁĄCZNIE gdy `reference_low`/`reference_high` finalnie zostają puste, i tylko dla linii pasujących do wąskiego wzorca `^[≥≤<>]\s*=?\s*\d` (zaczyna się od symbolu porównania i cyfry).
+
+**Dlaczego:** realny przypadek z lipidogramu — HDL/nie-HDL/LDL wyrażają próg jako zdanie z cytatem wytycznych („≥ 40 mg/dl zgodnie z zaleceniami PTK i PTDL"), czasem kilka progów zależnych od kategorii ryzyka pacjenta („<100 mg/dl - bardzo duże ryzyko / <130 - duże / <145 - zdrowi"). Bez tej zmiany zdanie znikało całkowicie — złamanie zasady „nie gub po cichu" z etapu 3(oryg.). Świadomie NIE próbowano sparsować tego na `reference_low`/`reference_high` — przy wielu progach zależnych od nieznanego kontekstu pacjenta wybór „tego jednego właściwego" byłby zgadywaniem, gorszym niż `NULL`.
+
+**Jak działa:** wzorzec złapie linię zaczynającą się od symbolu porównania + cyfry, niezależnie od reszty zdania — działa dla „≥ 40 mg/dl zgodnie z..." i „<100 mg/dl - dla osób...", ale świadomie NIE złapie stylu „Stężenie zalecane: powyżej 40 mg/dl" (inne sformułowanie w innym dokumencie tego samego labu, weryfikowane realnie — patrz Pułapki). Wielokrotne dopasowania w jednym chunku (np. 3 progi ryzyka nie-HDL) łączą się przez „ / ".
+
+**Pułapki:** (1) wzorzec musi być wąski — szerszy check typu „linia zawiera cyfrę" złapałby też stopkę strony („Strona: 1 z 2") jako fałszywy zakres referencyjny; test na LDL to potwierdził (stopka poprawnie odrzucona). (2) przypis metodologiczny przy eGFR („Wzór wg MDRD") nie zawiera cyfry na początku linii, więc nie trafia do `note` — sprawdzone jawnym testem, nie założeniem. (3) realny efekt na 14 dokumentach: 12→9 rekordów liczbowych bez żadnej informacji o zakresie; pozostałe 9 to albo naprawdę brak progu w źródle, albo inne sformułowanie w drugim dokumencie tego samego labu — świadomie zaakceptowane, nie gonimy każdego wariantu językowego regexem.
 

@@ -43,6 +43,7 @@ Zasady przekrojowe:
 - **LLM: wyłącznie Claude przez abonament Pro — zero zakupu tokenów API.** Wywołania programistyczne przez Claude Code headless: `claude -p "<prompt>"` jako komenda shell z Pythona/n8n. Weryfikacja aliasów: Haiku (`--model`). Nie dodawaj kodu używającego kluczy API Anthropic ani SDK z rozliczeniem tokenowym.
 - Kod i nazwy po angielsku, komentarze i docstringi po polsku.
 - Diagramy Mermaid: etykiety węzłów zawsze w cudzysłowach (`A["..."]`), bez znaku `"` w treści etykiet — pełne reguły i historia incydentu na końcu `docs/roadmap.md`.
+- **Wynik polecenia Bash bywa niewidoczny dla operatora w UI** (chowa się pod zwiniętym „Ran 1 shell command", trzeba go ręcznie rozwinąć). Gdy operator prosi o pokazanie/wydrukowanie czegoś „tutaj"/„w terminalu"/„output" (tabela, przykładowe rekordy, diff) — wklej realny wynik wprost do treści odpowiedzi (blok ```), nie tylko odnoś się do niego w tekście.
 
 ## Praca etapami — `docs/stages/`
 

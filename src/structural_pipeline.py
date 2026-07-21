@@ -132,16 +132,25 @@ def _num(cell: str):
     return None
 
 
+_THRESHOLD_NOTE = re.compile(r"^[≥≤<>]\s*=?\s*\d")  # "≥ 40 mg/dl zgodnie z..." / "<100 mg/dl - dla..."
+
+
 def parse_section_chunk(chunk: list[str], inline_val: str | None):
-    """Z linii NALEŻĄCYCH do markera sekcyjnego wyciąga (value, value_text, unit, lo, hi).
+    """Z linii NALEŻĄCYCH do markera sekcyjnego wyciąga (value, value_text, unit, lo, hi, note).
 
     Format sekcyjny: wartość/jednostka/zakres rozrzucone w kolejnych liniach, przeplecione
     szumem (daty, opis metody, tekst referencyjny). Zbieramy zachłannie, pomijając szum.
     Zakres bierzemy WYŁĄCZNIE z linii czysto-liczbowych — prozę z liczbami ("Poniżej 150 mg/dl")
     ignorujemy, żeby nie zassać liczb z tekstu referencyjnego.
+
+    `note`: niektóre panele (lipidogram) podają zalecany próg jako zdanie, nie czysty zakres
+    ("≥ 40 mg/dl zgodnie z zaleceniami PTK i PTDL", czasem dwa progi zależne od kategorii
+    ryzyka pacjenta) — takiej prozy nie da się bezpiecznie sparsować na lo/hi bez zgadywania,
+    więc trafia surowo do `note` (tylko gdy lo/hi finalnie puste), zamiast zniknąć bez śladu.
     """
     value = value_text = unit = None
     range_nums: list[float] = []
+    note_parts: list[str] = []
     if inline_val:                       # wartość w tej samej linii co nazwa ("Kwas moczowy (...) 5,6")
         value = _num(inline_val)
         value_text = None if value is not None else inline_val
@@ -171,20 +180,23 @@ def parse_section_chunk(chunk: list[str], inline_val: str | None):
         if value is None and value_text is None and len(s) <= 30 and len(s.split()) <= 3:
             value_text = s                               # wynik jakościowy (serologia: "niereaktywny")
             break                                        # jakościowy nie ma jedn./zakresu — stop (chroni przed PII w trailerze)
+        if _THRESHOLD_NOTE.match(s):                      # próg wpleciony w zdanie — zachowaj surowo, nie parsuj
+            note_parts.append(s)
 
     lo = hi = None
     if len(range_nums) >= 2:
         lo, hi = sorted(range_nums[:2])                  # OCR bywa odwraca kolejność MIN/MAX -> sortuj
     elif len(range_nums) == 1:
         hi = range_nums[0]                               # pojedynczy próg referencyjny -> górna granica
-    return value, value_text, unit, lo, hi
+    note = " / ".join(note_parts) if (lo is None and hi is None and note_parts) else None
+    return value, value_text, unit, lo, hi, note
 
 
-def _record(panel, marker, name_raw, value, value_text, unit, lo, hi, date, source) -> dict:
+def _record(panel, marker, name_raw, value, value_text, unit, lo, hi, date, source, note=None) -> dict:
     return {
         "record_type": "structural", "panel": panel, "marker": marker,
         "marker_raw": name_raw, "value": value, "value_text": value_text,
-        "unit": unit, "reference_low": lo, "reference_high": hi,
+        "unit": unit, "reference_low": lo, "reference_high": hi, "reference_note": note,
         "exam_date": date, "source_file": source,
     }
 
@@ -273,10 +285,10 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
     idxs = [a[0] for a in anchors]
     for n, (i, p, canon, name_raw, inline_val) in enumerate(anchors):
         end = idxs[n + 1] if n + 1 < len(anchors) else len(lines)
-        value, value_text, unit, lo, hi = parse_section_chunk(lines[i + 1:end], inline_val)
-        if value is None and value_text is None and unit is None and lo is None and hi is None:
+        value, value_text, unit, lo, hi, note = parse_section_chunk(lines[i + 1:end], inline_val)
+        if value is None and value_text is None and unit is None and lo is None and hi is None and note is None:
             continue  # anchor-widmo (np. nazwa markera powtórzona w nagłówku sekcji) — brak treści, pomiń
-        records.append(_record(p, canon, name_raw, value, value_text, unit, lo, hi, date, source))
+        records.append(_record(p, canon, name_raw, value, value_text, unit, lo, hi, date, source, note))
 
     return records, unknown
 

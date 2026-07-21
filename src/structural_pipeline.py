@@ -104,9 +104,13 @@ def is_separator(cells: list[str]) -> bool:
 
 
 # Linie-szum nagłówka/stopki (żeby nie wziąć ich za marker ani za wartość jakościową).
+# Rozszerzone o etap 4 (backfill, nowy format labu): nr księgi rejestrowej, daty przyjęcia/
+# pobrania próbki, materiał badany (material/materiał, w tym warianty OCR "materiat"/"materia"),
+# opis metody/procedury (w tym OCR M->V: "vetoda"), adnotacje "uwaga:".
 _NOISE = re.compile(
-    r"^(data |badanie wykonano|dot\. materia|kod |oddzial|adres|pesel|plec|"
-    r"wynik|jedn|min|max|flaga|pacjent|badanie|lek\.kier|odbiorca|dok\.)", re.I
+    r"^(data|badanie wykonano|dot\. materia|kod |oddzial|adres|pesel|plec|"
+    r"wynik|jedn|min|max|flaga|pacjent|badanie|lek\.kier|odbiorca|dok\.|"
+    r"nr ksiegi|materia|metoda|vetoda|procedura|uwaga)", re.I
 )
 
 
@@ -352,6 +356,15 @@ def ocr_markdown(doc: Path) -> str:
     return _ocr_markdown(doc, OCR_CACHE)
 
 
+def _load_pending_panels(path: Path) -> dict[str, dict[str, str]]:
+    """Surowa struktura {panel: {nazwa: kod}} z pending/aliases.yml — punkt startowy do
+    dopisywania nowych propozycji, żeby zapis po każdym markerze nie kasował poprzednich."""
+    if not path.exists():
+        return {}
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return data.get("pending_panels") or {}
+
+
 def load_existing_proposals(path: Path) -> dict[tuple[str, str], str]:
     """Wczytuje pending/aliases.yml z poprzedniego (możliwe że przerwanego) runu.
 
@@ -377,7 +390,7 @@ def main() -> int:
     STORE.mkdir(parents=True, exist_ok=True)
     PENDING.mkdir(parents=True, exist_ok=True)
 
-    all_records, all_unknown, rejected = [], {}, []
+    all_records, all_unknown, rejected, silent_zero = [], {}, [], []
     for i, doc in enumerate(docs, 1):
         text = ocr_markdown(doc)
         if len(text) < MIN_OCR_CHARS:
@@ -388,7 +401,14 @@ def main() -> int:
         all_records.extend(recs)
         for panel, name in unknown:
             all_unknown.setdefault((panel, norm(name)), (panel, name))
-        print(f"[{i}/{len(docs)}] {doc.name[:40]:40s} rekordów={len(recs):3d} nieznanych={len(unknown):2d}", flush=True)
+        if not recs and not unknown:
+            # ani rozpoznanych rekordów, ani flagi "nieznany" — dokument spoza obu znanych
+            # formatów (tabela / sekcja z ICD-9), np. bare markery bez kodu. Cichy dotąd (etap 3:
+            # "ograniczenie udokumentowane") -> teraz WIDOCZNY, żeby nie łamać S1 po cichu.
+            silent_zero.append(doc.name)
+            print(f"[{i}/{len(docs)}] {doc.name[:40]:40s} rekordów=  0 nieznanych= 0  ⚠ SPRAWDŹ RĘCZNIE (nierozpoznany format)", flush=True)
+        else:
+            print(f"[{i}/{len(docs)}] {doc.name[:40]:40s} rekordów={len(recs):3d} nieznanych={len(unknown):2d}", flush=True)
 
     # zapis NDJSON (dev: nadpisujemy; produkcyjnie append-only)
     out = STORE / "structural.ndjson"
@@ -398,25 +418,43 @@ def main() -> int:
     print(f"\nZapisano {len(all_records)} rekordów -> {out}")
     if rejected:
         print(f"Odrzuconych (nieczytelny OCR): {len(rejected)}/{len(docs)} -> {', '.join(rejected)}")
+    if silent_zero:
+        print(f"Bez treści rozpoznanej (sprawdź ręcznie): {len(silent_zero)}/{len(docs)} -> {', '.join(silent_zero)}")
 
     # Warstwa 3: propozycje aliasów dla nieznanych -> pending/ (odporne na wznowienie po przerwaniu)
     pend = PENDING / "aliases.yml"
     if all_unknown:
-        existing = load_existing_proposals(pend)
-        reused = 0
+        current_keys = {(panel, norm(name)) for panel, name in all_unknown.values()}
+        proposals: dict[str, dict[str, str]] = {}
+        for panel, markers in _load_pending_panels(pend).items():
+            for name, code in (markers or {}).items():
+                if (panel, norm(name)) in current_keys:  # przenieś tylko to, co WCIĄŻ jest nieznane
+                    proposals.setdefault(panel, {})[name] = code  # (np. is_noise() mógł kod poprawić i zawęzić zbiór)
+        reused = failed = 0
         print(f"Warstwa 3: {len(all_unknown)} nieznanych nazw -> Haiku proponuje aliasy...")
-        proposals = {}
+        existing = load_existing_proposals(pend)
         for panel, name in all_unknown.values():
             key = (panel, norm(name))
             if key in existing:
-                code, reused = existing[key], reused + 1
-            else:
+                reused += 1
+                continue  # już w proposals z inicjalizacji powyżej — nic do zrobienia
+            try:
                 code = propose_alias_haiku(panel, name)
+            except Exception as e:  # noqa: BLE001 — jeden padnięty marker nie może ubić pozostałych 95
+                code, failed = "NEEDS_REVIEW", failed + 1
+                print(f"  [BŁĄD] '{name}' ({panel}): {type(e).__name__} -> NEEDS_REVIEW, kontynuuję", flush=True)
             proposals.setdefault(panel, {})[name] = code
-        if reused:
-            print(f"  (w tym {reused} odzyskanych z poprzedniego runu — bez ponownego pytania Haiku)")
+            pend.write_text(yaml.safe_dump({"pending_panels": proposals}, allow_unicode=True, sort_keys=False),
+                            encoding="utf-8")  # zapis PO KAŻDYM markerze — crash w środku nie kasuje reszty
+        # zapis końcowy ZAWSZE — jeśli wszystko zostało odzyskane (zero nowych wywołań), pętla
+        # wyżej ani razu nie zapisała na dysk przefiltrowanego stanu (stare, usunięte klucze
+        # np. przez rozszerzenie is_noise() zostałyby błędnie na dysku bez tego zapisu)
         pend.write_text(yaml.safe_dump({"pending_panels": proposals}, allow_unicode=True, sort_keys=False),
                         encoding="utf-8")
+        if reused:
+            print(f"  (w tym {reused} odzyskanych z poprzedniego runu — bez ponownego pytania Haiku)")
+        if failed:
+            print(f"  (w tym {failed} nieudanych wywołań -> NEEDS_REVIEW, do ręcznego uzupełnienia)")
         print(f"Propozycje -> {pend} (operator zatwierdza, przenosząc do config/aliases.yml)")
     else:
         print("Brak nieznanych markerów — wszystkie zmapowane.")

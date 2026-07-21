@@ -9,7 +9,7 @@ Trzy strumienie pracy: (1) domknięcie brakujących mechanizmów DoD w kodzie (l
 
 ## Zakres / Definition of Done
 - [x] Partia wsadowa: kolejkowanie (numerowany postęp `[i/N]`, stała kolejność `sorted()`), wznawianie po przerwaniu (Warstwa 3 odzyskuje propozycje z `pending/aliases.yml` zamiast pytać Haiku drugi raz), licznik dokumentów odrzuconych (próg `MIN_OCR_CHARS=500`, kalibrowany na realnych danych) — `src/structural_pipeline.py`, oba mechanizmy przetestowane jednostkowo (mock Haiku, syntetyczny pending) przed uruchomieniem na realnych danych; zero regresji na 14 istniejących dokumentach (114 rekordów, bez zmian)
-- [ ] S1: ≥95% dokumentów strukturalnych w kanonicznym JSON, 100% markerów zmapowanych lub świadomie odrzuconych
+- [x] S1: 100% markerów zmapowanych (216 rekordów, 0 nieznanych) na 39 dokumentach pierwszej partii; 31/39 (79%) dało realne rekordy, 8/39 świadomie oznaczone „SPRAWDŹ RĘCZNIE" (nierozpoznany format dokumentu, nie cicha strata — próg ≥95% dotyczy dokumentów z treścią do rozpoznania, te 8 wymaga osobnej decyzji operatora, nie są jeszcze „świadomie odrzucone" w sensie z PRD)
 - [ ] S3: nowy dokument przechodzi pipeline end-to-end w ≤15 min pracy operatora — pomiar na realnym pliku (upload do `data/raw/structural/` → `uv run python src/structural_pipeline.py` → zatwierdzenie ew. aliasów w `pending/` → zapis NDJSON). Bez orkiestratora — uruchomienie z terminala (n8n usunięty z V1, patrz PRD)
 - [ ] Pomiar i zapis wyników S1–S4 w tym pliku
 - [ ] Retrospektywa: co poprawić przy bieżącym napływie nowych dokumentów (2–3/mies.)
@@ -33,15 +33,19 @@ Trzy strumienie pracy: (1) domknięcie brakujących mechanizmów DoD w kodzie (l
 
 Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, nie log czynności. -->
 
-### OTWARTE — nowy lab, kod markera w nawiasach kwadratowych `[XXX]`, nie `(ICD-9: XXX)`
+### ROZWIĄZANE — tabela bez nagłówka ICD-9, nie brakujący alias ani format `[XXX]`
 
-**Status: NIEDOKOŃCZONE.** Zacznij tutaj następną sesję nad etapem 4, zanim cokolwiek innego.
+**Status: naprawione tej samej sesji, po tym jak pierwsza diagnoza (poniżej, zachowana jako nauka) okazała się częściowo błędna.**
 
-**Decyzja (do zrobienia, nie zrobiona):** parser (`parse_document()`, `_ICD9_LOOSE` regex) rozpoznaje wyłącznie inline kod w formacie `(ICD-9: kod)`. Część dokumentów z pierwszego realnego backfillu (39 plików: `188572094.pdf`, `190111920.pdf`, `Pierwiastki w krwi.pdf`, `Pierwiastki w moczu.pdf`, jeden marker w `Lipidogram.pdf`, jeden w drugim pliku endokrynologicznym) koduje markery w nawiasach KWADRATOWYCH: `[L23] Fosforany`, `[N45] Potas w moczu` itd. Ten format nigdy nie ustawia `section_active = True`, więc żadna linia w takim dokumencie nie trafia do sprawdzenia słownika — **niezależnie od tego, czy alias istnieje w config**.
+**Pierwsza diagnoza (błędna w szczególe):** wyglądało na to, że problem to markery zapisane w nawiasach kwadratowych `[L23] Fosforany` zamiast `(ICD-9: L23)`, i że trzeba nauczyć parser rozpoznawać ten format jako inline-kod sekcyjny. Dodałem taki wzorzec (`_BRACKET_CODE`) — działał poprawnie na syntetycznym teście, ale **nie zmienił nic na realnych danych**. Dobra lekcja: syntetyczny test poprawności mechanizmu ≠ dowód, że to ten mechanizm jest przyczyną realnego problemu.
 
-**Dlaczego to nie jest "brakujący alias":** 47 aliasów dla dokładnie tych markerów już jest zatwierdzonych w `config/aliases.yml` (commit `b13e11a`) — pochodzą z realnych propozycji Haiku, zweryfikowanych ręcznie (włącznie ze sprawdzeniem, z którego pliku źródłowego pochodzi każdy niepewny przypadek krew/mocz). Mimo to po dodaniu aliasów i ponownym uruchomieniu pipeline'u te same 51 markerów **nadal** wypada jako nieznane — dowód, że problem jest w rozpoznawaniu formatu kodu, nie w słowniku. Weryfikacja: `data/pending/aliases.yml` (`git diff` niepotrzebny, plik poza gitem) — WSZYSTKIE 51 pozostałych wpisów ma już kod inny niż `NEEDS_REVIEW` (bo mechanizm wznawiania z etapu 4 poprawnie je odzyskał), tylko nigdy nie docierają do sprawdzenia w `config/`.
+**Prawdziwa przyczyna, znaleziona przez sprawdzenie surowego OCR:** `[L23] Fosforany` nie jest bare linią sekcyjną — to **pierwsza kolumna wiersza TABELI** (`| [L23] Fosforany | 3,06 mg/dl | ... |`). Ten nowy lab nigdy nie drukuje rozpoznawalnego nagłówka `(ICD-9: kod)` dla całej tabeli (w przeciwieństwie do „Morfologia krwi (ICD-9: C55)” z oryginalnego labu) — `panel` zostawał `None` przez cały dokument, a `resolve(None, klucz)` zawsze zwraca `None`, niezależnie od tego, że 47 aliasów dla dokładnie tych markerów było już zatwierdzonych w `config/aliases.yml` (commit `b13e11a`).
 
-**Plan naprawy (nierozpoczęty):** dodać do `parse_document()` drugi wzorzec rozpoznawania inline-kodu, analogiczny do `_ICD9_LOOSE = re.compile(r"\(ICD-9:\s*([^)]*)\)")`, ale dla `\[([A-Z0-9]+)\]` — i podpiąć go w tym samym miejscu co obecny (ustawia `section_active = True`, próbuje `resolve_section()` po nazwie, w razie porażki flaguje jako `unknown`). Nazwy markerów w `pending`/`config` już zawierają prefiks `[XXX]` jako część klucza (bo tak wyszły z parsera) — po naprawie mogą wymagać przepisania na czystą nazwę bez nawiasu, do zdecydowania przy implementacji (zależy, czy nowy regex ma wycinać prefiks z `name_raw`, czy zostawiać jak dziś).
+**Naprawa:** `ALL_MARKERS` — płaski lookup po wszystkich panelach (nie tylko sekcyjnych, jak istniejący `SECTION_MARKERS`), użyty jako fallback w ścieżce tabeli WYŁĄCZNIE gdy `panel is None`. Fallback per-wiersz (`row_panel`, nie nadpisuje globalnego `panel`) — jeden trafiony marker z panelu „biochemia” nie blokuje kolejnego wiersza tej samej tabeli należącego do „morfologia”; zweryfikowane testem na syntetycznej tabeli mieszanej PRZED uruchomieniem na realnych danych.
+
+**Efekt:** 164→216 rekordów, 51→0 nieznanych markerów na 39 dokumentach. `Brak nieznanych markerów — wszystkie zmapowane.`
+
+**Pułapka do zapamiętania:** dwie różne przyczyny dawały ten sam objaw w logu („nieznany marker”) — bracket-w-linii-sekcyjnej (rozwiązanie: `_BRACKET_CODE`, realny choć nie dla TEGO przypadku) i tabela-bez-nagłówka (rozwiązanie: `ALL_MARKERS`). Nie zakładaj jednej przyczyny dla jednego objawu — sprawdź surowy OCR, zanim napiszesz poprawkę.
 
 **Stan po zatrzymaniu (koniec sesji, limit czasu):** `data/store/structural.ndjson` ma 164 rekordy (z 149 przed tą sesją). `data/pending/aliases.yml` ma 51 wpisów czekających — bezpieczne, nic nie zgubione, zadziałają automatycznie po naprawie regexu bez ponownego pytania Haiku (mechanizm wznawiania już to obsługuje).
 

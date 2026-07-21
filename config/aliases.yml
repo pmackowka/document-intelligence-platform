@@ -131,6 +131,8 @@ panels:
       "[o35] stezenie sodu": "urine_sodium"
       "fosfor nieorganiczny": "PHOS"
       "magnez": "Mg"
+      "magnez - surowica": "Mg"
+      "mg - surowica": "Mg"
       "wapni w dzm": "urine_calcium_24h"
       "ggtp": "GGT"
       "crp": "CRP"

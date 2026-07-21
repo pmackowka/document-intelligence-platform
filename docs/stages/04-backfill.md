@@ -15,7 +15,13 @@ Trzy strumienie pracy: (1) domknięcie brakujących mechanizmów DoD w kodzie (l
 - [ ] Retrospektywa: co poprawić przy bieżącym napływie nowych dokumentów (2–3/mies.)
 
 ## Wyniki S1–S4
-<!-- uzupełniane po backfillu -->
+
+| # | Kryterium | Próg | Wynik |
+|---|---|---|---|
+| S1 | ≥95% dokumentów w kanonicznym JSON, 100% markerów zmapowanych/odrzuconych | — | **PASS** — 216 rekordów, 0 nieznanych markerów, 31/39 (79%) dok. z wynikami + 8/39 (21%) świadomie odrzuconych = 100% z 39 rozliczone |
+| S2 | Trend markera z ≥3 pomiarami dostępny jednym promptem | ≥3 pomiary | **PASS** — 19 serii marker+jednostka z ≥3 datami (np. cholesterol całkowity: 4 pomiary, 2020–2025, 194→238→227→225 mg/dl); zapytanie zademonstrowane bezpośrednio z NDJSON |
+| S3 | Nowy dokument end-to-end | ≤15 min pracy operatora | *do zmierzenia — wymaga jednego świeżego dokumentu od operatora* |
+| S4 | NDJSON ładuje się do BigQuery bez transformacji | brak błędów schematu | **PASS** — potwierdzone przez operatora (etap 3): load 11-kolumnowy, potem 12-kolumnowy (`reference_note`) po rozszerzeniu schematu, oba bez błędów |
 
 ## Notatki
 <!-- Grupuj po temacie, nie po dacie (chronologię trzyma git). Każdy podpunkt

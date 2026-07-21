@@ -12,15 +12,14 @@ Lokalna platforma do przetwarzania osobistej dokumentacji medycznej (~390 plikó
 
 ## Architektura V1 (z PRD — kluczowe decyzje)
 
-Dwie klasy dokumentów, dwa pipeline'y:
+Jeden pipeline — dane strukturalne (badania krwi/moczu): OCR → standaryzacja (dictionary mapping z `aliases.yml` → regex na wartości → weryfikacja LLM nieznanych nazw) → kanoniczny JSON z jednostkami i zakresami referencyjnymi.
 
-- **Strukturalne** (badania krwi/moczu, ~30% wolumenu): OCR → standaryzacja (dictionary mapping z `aliases.yml` → regex na wartości → weryfikacja LLM nieznanych nazw) → kanoniczny JSON z jednostkami i zakresami referencyjnymi.
-- **Narracyjne** (opisy USG/MRI/TK, ~70% wolumenu): OCR → anonimizacja → ekstrakcja ustaleń przez LLM do schematu (`finding`, `location`, `measurement_value`, `measurement_unit`, `status`, `exam_type`, `exam_date`).
+> Pipeline narracyjny (opisy USG/MRI/TK: anonimizacja Presidio + ekstrakcja ustaleń LLM) był częścią V1 do etapu 5, usunięty w PRD v1.3 — patrz changelog `docs/prd.md`.
 
 Zasady przekrojowe:
 
-- **Human-in-the-loop obowiązkowy**: propozycje aliasów i wyekstrahowanych ustaleń trafiają do `pending/*.yml`; pipeline czyta wyłącznie zatwierdzone wpisy. Operator zatwierdza edytując pliki w Claude Code.
-- **Kolejność anonimizacji (reguła twarda)**: żaden tekst dokumentu nie trafia do zewnętrznego API przed Presidio. Jedyny wyjątek: weryfikacja aliasów (sama nazwa markera, bez PII).
+- **Human-in-the-loop obowiązkowy**: propozycje aliasów trafiają do `pending/*.yml`; pipeline czyta wyłącznie zatwierdzone wpisy. Operator zatwierdza edytując pliki w Claude Code.
+- **Reguła prywatności**: do API/LLM idzie wyłącznie nazwa markera (Warstwa 3, weryfikacja nieznanych nazw) — nigdy pełna treść dokumentu.
 - **Magazyn danych**: katalog NDJSON, płaskie rekordy append-only, schemat BigQuery-ready (ręczny load; bez SQLite, bez bazy).
 - **Wiedza domenowa w YAML**, nie w kodzie: `aliases.yml` (panel-aware, pole `format: table|section`), `units.yml`, `marker_labels.yml` (kod kanoniczny → polska etykieta do raportów), `reference_ranges.yml`, `laboratories.yml`. Dodanie laboratorium/panelu nie może wymagać zmiany kodu.
 - **Ścieżki artefaktów (reguła prywatności)**: wszystko, co zawiera treść medyczną — surowe dokumenty, `pending/` (propozycje aliasów/ustaleń), magazyn NDJSON — żyje pod `data/` (w `.gitignore`). Wersjonowane są wyłącznie `config/` (YAML domenowy bez PII), kod i docs. Nigdy nie twórz plików z treścią medyczną poza `data/`.
@@ -30,29 +29,28 @@ Zasady przekrojowe:
   | `config/` | YAML domenowy (`aliases`, `units`, `marker_labels`, `reference_ranges`, `laboratories`) | — | wersjonowany | etap 3 |
   | `src/` | kod Python (logika biznesowa) | — | wersjonowany | od etapu 0 |
   | `data/raw/structural/` | surowe dok. strukturalne (krew/mocz) | **surowy** | lokalnie | ingest (próbka: etap 1) |
-  | `data/raw/narrative/` | surowe dok. narracyjne (USG/MRI/TK) | **surowy** | lokalnie | ingest (próbka: etap 1) |
-  | `data/interim/` | wyjście pośrednie: OCR-owany + zanonimizowany MD/JSON | **pośredni** | lokalnie | etap 1 (OCR), 5 (anonimizacja) |
-  | `data/pending/` | propozycje aliasów/ustaleń do zatwierdzenia | kontrola (HITL) | lokalnie | etap 3 (aliasy), 5 (ustalenia) |
-  | `data/store/` | magazyn NDJSON — źródło prawdy, BigQuery-ready | **finalny — dane** | lokalnie | etap 3, 5, 8 |
+  | `data/interim/` | wyjście pośrednie: OCR-owany MD/JSON | **pośredni** | lokalnie | etap 1 (OCR) |
+  | `data/pending/` | propozycje aliasów do zatwierdzenia | kontrola (HITL) | lokalnie | etap 3 |
+  | `data/store/` | magazyn NDJSON — źródło prawdy, BigQuery-ready | **finalny — dane** | lokalnie | etap 3, 8 |
   | `data/reports/` | **finalne** raporty Markdown (trendy, na wizytę) | **finalny — raport** | lokalnie | etap 6 |
 
   Podfoldery `data/` istnieją tylko lokalnie (git nie śledzi ignorowanych ścieżek) — kod pipeline'u tworzy je przy starcie (`mkdir -p`).
 
-  Podział `data/raw/{structural,narrative}/` to **realny układ ingestu**: klasę nadaje operator ręcznie przy uploadzie przez n8n (human-in-the-loop, nie klasyfikator automatyczny — PRD Scope V1 pkt 3), a plik ląduje w podfolderze swojej klasy. Ingest wyłącznie ręczny — **brak konektora Google Drive** (usunięty w PRD v1.1).
-- **Kolejność implementacji**: pipeline strukturalny najpierw, ale ekstrakcję narracyjną zwaliduj na 5–10 przykładowych opisach zanim zbudujesz wokół niej resztę.
+  Ingest ląduje w `data/raw/structural/` — wyłącznie ręczny upload przez n8n, bez klasyfikacji (V1 po zawężeniu v1.3 obsługuje wyłącznie dokumenty strukturalne, nie ma czego routować). Brak konektora Google Drive (usunięty w PRD v1.1).
 
 ## Stack i ograniczenia techniczne
 
-- **Python** — cała logika biznesowa (OCR, standaryzacja, anonimizacja, zapis). **n8n** — wyłącznie orkiestracja, zero logiki.
+- **Python** — cała logika biznesowa (OCR, standaryzacja, zapis). **n8n** — wyłącznie orkiestracja, zero logiki.
 - **OCR**: Docling (główny silnik) + Apple Vision jako backend dla zdjęć. Środowisko: lokalnie na macOS.
-- **Anonimizacja**: Microsoft Presidio — `PlPeselRecognizer` wbudowany; polski NER wymaga spaCy `pl_core_news_lg` jako NLP engine.
 - **LLM: wyłącznie Claude przez abonament Pro — zero zakupu tokenów API.** Wywołania programistyczne przez Claude Code headless: `claude -p "<prompt>"` jako komenda shell z Pythona/n8n. Weryfikacja aliasów: Haiku (`--model`). Nie dodawaj kodu używającego kluczy API Anthropic ani SDK z rozliczeniem tokenowym.
 - Kod i nazwy po angielsku, komentarze i docstringi po polsku.
 - Diagramy Mermaid: etykiety węzłów zawsze w cudzysłowach (`A["..."]`), bez znaku `"` w treści etykiet — pełne reguły i historia incydentu na końcu `docs/roadmap.md`.
 
 ## Praca etapami — `docs/stages/`
 
-Implementacja podzielona na etapy `00`–`08`; każdy plik w `docs/stages/` ma sekcje: **Cel**, **Zakres / Definition of Done** (checkboxy = kroki) i **Notatki**. Kolejność plików = kolejność pracy (zależności: etap 5 wymaga 2 i 4).
+Implementacja podzielona na etapy `00`–`08`; każdy plik w `docs/stages/` ma sekcje: **Cel**, **Zakres / Definition of Done** (checkboxy = kroki) i **Notatki**. Kolejność plików = kolejność pracy.
+
+Numeracja ma świadome luki — **02, 04, 05 nie istnieją**: dotyczyły pipeline'u narracyjnego, usuniętego z V1 w PRD v1.3. Pierwszy plik z nieodhaczonym checkboxem nadal wyznacza bieżący etap, po prostu pomijając brakujące numery.
 
 **Workflow obowiązkowy w każdej sesji implementacyjnej:**
 
@@ -73,4 +71,4 @@ Etap skończony = wszystkie checkboxy odhaczone lub świadomie skreślone z adno
 
 ## Out of scope V1 (nie implementuj bez zmiany PRD)
 
-Domeny inne niż medyczna; UI/dashboard/wykresy; automatyczny load do BigQuery; dziennik interwencji/stylu życia; RAG, wektorowe bazy, FastAPI/Docker/Cloud Run, MCP server, agenci (to wersje V2–V5 z zarysu).
+Domeny inne niż medyczna; przetwarzanie dokumentów narracyjnych (USG/MRI/TK/kolonoskopia — usunięte w PRD v1.3); UI/dashboard/wykresy; automatyczny load do BigQuery; dziennik interwencji/stylu życia; RAG, wektorowe bazy, FastAPI/Docker/Cloud Run, MCP server, agenci (to wersje V2–V4 z zarysu).

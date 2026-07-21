@@ -1,4 +1,4 @@
-"""Wspólny silnik OCR (Apple Vision, pl-PL) — używany przez pipeline strukturalny i narracyjny.
+"""Wspólny silnik OCR (Apple Vision, pl-PL) — używany przez pipeline strukturalny.
 
 Wymuszony pełny OCR (`force_full_page_ocr`) — decyzja z etapu 1 (zepsuta warstwa tekstowa w źródłach).
 """

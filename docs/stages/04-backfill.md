@@ -9,18 +9,18 @@ Trzy strumienie pracy: (1) domknięcie brakujących mechanizmów DoD w kodzie (l
 
 ## Zakres / Definition of Done
 - [x] Partia wsadowa: kolejkowanie (numerowany postęp `[i/N]`, stała kolejność `sorted()`), wznawianie po przerwaniu (Warstwa 3 odzyskuje propozycje z `pending/aliases.yml` zamiast pytać Haiku drugi raz), licznik dokumentów odrzuconych (próg `MIN_OCR_CHARS=500`, kalibrowany na realnych danych) — `src/structural_pipeline.py`, oba mechanizmy przetestowane jednostkowo (mock Haiku, syntetyczny pending) przed uruchomieniem na realnych danych; zero regresji na 14 istniejących dokumentach (114 rekordów, bez zmian)
-- [x] S1: 100% markerów zmapowanych (216 rekordów, 0 nieznanych) na 39 dokumentach pierwszej partii; 31/39 (79%) dało realne rekordy, **8/39 (21%) świadomie odrzucone** (trzeci, nierozpoznany format — pojedyncze testy bez tabeli/ICD-9/nawiasów, decyzja operatora po sprawdzeniu struktury: nie inżynierować kolejnego parsera dla garstki jednorazowych przypadków, patrz notatka „8 odrzuconych dokumentów")
-- [ ] S3: nowy dokument przechodzi pipeline end-to-end w ≤15 min pracy operatora — pomiar na realnym pliku (upload do `data/raw/structural/` → `uv run python src/structural_pipeline.py` → zatwierdzenie ew. aliasów w `pending/` → zapis NDJSON). Bez orkiestratora — uruchomienie z terminala (n8n usunięty z V1, patrz PRD)
-- [ ] Pomiar i zapis wyników S1–S4 w tym pliku
-- [ ] Retrospektywa: co poprawić przy bieżącym napływie nowych dokumentów (2–3/mies.)
+- [x] S1: 100% markerów zmapowanych (221 rekordów, 0 nieznanych) na 40 dokumentach pierwszej partii; 32/40 (80%) dało realne rekordy, **8/40 (20%) świadomie odrzucone** (trzeci, nierozpoznany format — pojedyncze testy bez tabeli/ICD-9/nawiasów, decyzja operatora po sprawdzeniu struktury: nie inżynierować kolejnego parsera dla garstki jednorazowych przypadków, patrz notatka „8 odrzuconych dokumentów")
+- [x] S3: nowy dokument przechodzi pipeline end-to-end w ≤15 min pracy operatora — zmierzone na realnym pliku (`Bilirubina, Kreatynina, Potas : K, Sód : Na.pdf`): **13,5 min (813s), PASS**. Sam pipeline: 44s. Reszta: zatwierdzenie 1 nowego aliasu (`BIL_IND`) + narzut identyfikacji, który plik jest nowy (nie dotyczy normalnego użycia — operator wie, co dodał)
+- [x] Pomiar i zapis wyników S1–S4 w tym pliku
+- [x] Retrospektywa: co poprawić przy bieżącym napływie nowych dokumentów (2–3/mies.)
 
 ## Wyniki S1–S4
 
 | # | Kryterium | Próg | Wynik |
 |---|---|---|---|
-| S1 | ≥95% dokumentów w kanonicznym JSON, 100% markerów zmapowanych/odrzuconych | — | **PASS** — 216 rekordów, 0 nieznanych markerów, 31/39 (79%) dok. z wynikami + 8/39 (21%) świadomie odrzuconych = 100% z 39 rozliczone |
+| S1 | ≥95% dokumentów w kanonicznym JSON, 100% markerów zmapowanych/odrzuconych | — | **PASS** — 221 rekordów, 0 nieznanych markerów, 32/40 (80%) dok. z wynikami + 8/40 (20%) świadomie odrzuconych = 100% z 40 rozliczone |
 | S2 | Trend markera z ≥3 pomiarami dostępny jednym promptem | ≥3 pomiary | **PASS** — 19 serii marker+jednostka z ≥3 datami (np. cholesterol całkowity: 4 pomiary, 2020–2025, 194→238→227→225 mg/dl); zapytanie zademonstrowane bezpośrednio z NDJSON |
-| S3 | Nowy dokument end-to-end | ≤15 min pracy operatora | *do zmierzenia — wymaga jednego świeżego dokumentu od operatora* |
+| S3 | Nowy dokument end-to-end | ≤15 min pracy operatora | **PASS** — 13,5 min na realnym pliku z 1 nowym aliasem do zatwierdzenia (sam pipeline: 44s) |
 | S4 | NDJSON ładuje się do BigQuery bez transformacji | brak błędów schematu | **PASS** — potwierdzone przez operatora (etap 3): load 11-kolumnowy, potem 12-kolumnowy (`reference_note`) po rozszerzeniu schematu, oba bez błędów |
 
 ## Notatki
@@ -87,3 +87,13 @@ Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, ni
 
 **Pułapki:** zweryfikowane testem z podmienioną (monkeypatch) funkcją Haiku, która rzuciłaby błąd, gdyby została wywołana dla już znanego markera — nie samą inspekcją kodu. Realne dane strukturalne mają dziś 0 nieznanych markerów (słownik nasycony po etapie 2), więc mechanizmu nie dało się przetestować na produkcyjnym przebiegu — test izolowany był jedyną drogą do sprawdzenia go przed pierwszym realnym backfillem.
 
+
+### Retrospektywa — co poprawić przy bieżącym napływie (2–3 dok./mies.)
+
+**Decyzja:** proces jest gotowy na bieżący, mały napływ bez dalszych zmian w kodzie — S3 (13,5 min na dokument z nowym markerem, 44s sam pipeline) daje duży margines wobec ~3 dok./dzień, na które PRD i tak zakłada limit abonamentu Pro. Nic w mechanizmie nie wymaga poprawy PRZED kontynuacją; to, co wymagało poprawy, poprawiło się w trakcie tej właśnie partii.
+
+**Dlaczego (co się nauczyliśmy z 40 dokumentów):** każde NOWE źródło (inny lab niż oryginalny LUX MED/Diagnostyka) przynosi własne, nieoczekiwane konwencje formatowania — w tej jednej partii: nawiasy kwadratowe zamiast `(ICD-9: X)`, tabele bez żadnego nagłówka panelu, linie metadanych (nr księgi, autoryzacja, materiał/metoda badania) mylone z markerami. Trzy różne przyczyny, ten sam objaw w logu („nieznany marker”) — żadnej nie dało się przewidzieć z góry, wszystkie wymagały sprawdzenia surowego OCR, nie zgadywania z samego kształtu danych w `pending/`. Konkretny wniosek na przyszłość: gdy pojawi się KOLEJNY nowy lab, oczekuj podobnego wzorca (1–3 nowe „dziury” parsera) i zacznij diagnozę od tego samego miejsca — `data/interim/structural-ocr/*.md`, sprawdzenie obecności `|`, `ICD-9`, nawiasów — zanim cokolwiek naprawisz.
+
+**Jak działa proces przeglądu aliasów (potwierdzone realnie, nie teoretycznie):** ręczny przegląd propozycji Haiku złapał realne błędy, nie tylko potwierdził oczywistości — niespójne kody dla tego samego markera (`NEUT` vs `NEU`, `MON` vs `MONO`), i co ważniejsze: 3 z 8 wstępnych „pewnych” przypisań krew/mocz były błędne, wykryte dopiero po sprawdzeniu, z którego PLIKU ŹRÓDŁOWEGO pochodzi każdy marker (nazwa pliku „Pierwiastki w krwi” vs „w moczu” rozstrzygnęła jednoznacznie tam, gdzie dopasowanie po samym kodzie zawodziło). To dowód, że HITL na aliasach nie jest biurokracją — realnie zapobiega cichemu mieszaniu danych.
+
+**Pułapki:** limit abonamentu Pro objawił się realnie przy 96 sekwencyjnych wywołaniach Haiku naraz (timeout w środku pętli) — teraz obsłużone (zapis po każdym markerze, pojedynczy timeout nie ubija reszty), ale przy kolejnych dużych partiach nadal lepiej rozkładać w czasie niż odpalać wszystko jedną komendą, zgodnie z ryzykiem już nazwanym w PRD.

@@ -79,7 +79,7 @@ ALL_MARKERS = {
     for key, canon in p.get("markers", {}).items()
 }
 
-_NUM = re.compile(r"^[<>]?\s*\d+(?:[.,]\d+)?$")       # cała komórka to liczba: 13.2, 0,18, <1
+_NUM = re.compile(r"^([<>]?\s*\d+(?:[.,]\d+)?)(?:\s+[HLNhln*])?$")  # liczba, opcjonalnie z flagą "H"/"L" (OCR bywa łączy z granicą zakresu w jednej linii, np. "190,00 H")
 _ICD9 = re.compile(r"ICD-9:\s*([A-Z]\d+)")            # ścisły: kod panelu w komórce tabeli
 _ICD9_LOOSE = re.compile(r"\(ICD-9:\s*([^)]*)\)")     # luźny: dowolny kod inline (też "-", "055")
 _BRACKET_CODE = re.compile(r"^\[[A-Z0-9]+\]\s*\S")    # inny lab, wewnętrzny kod jako PREFIKS: "[L23] Fosforany"
@@ -99,8 +99,9 @@ _DATE_FORMATS: list[tuple[re.Pattern, str]] = [
 def to_num(cell: str):
     """Zwraca float, jeśli cała komórka jest liczbą; inaczej None (chroni przed cyframi z dat)."""
     cell = cell.strip()
-    if _NUM.match(cell):
-        return float(re.sub(r"[<>\s]", "", cell).replace(",", "."))
+    m = _NUM.match(cell)
+    if m:
+        return float(re.sub(r"[<>\s]", "", m.group(1)).replace(",", "."))
     return None
 
 
@@ -205,8 +206,9 @@ def _valid_code(code: str) -> bool:
 def _num(cell: str):
     """float z tokenu liczbowego (po HTML-unescape, tolerując >/<); None jeśli to nie liczba."""
     s = html.unescape(cell).strip()
-    if _NUM.match(s):
-        return float(re.sub(r"[<>\s]", "", s).replace(",", "."))
+    m = _NUM.match(s)
+    if m:
+        return float(re.sub(r"[<>\s]", "", m.group(1)).replace(",", "."))
     return None
 
 

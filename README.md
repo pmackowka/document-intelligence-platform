@@ -24,21 +24,25 @@ uv run python <skrypt>  # uruchomienie kodu w środowisku projektu
 
 Dwa gotowe prompty do wklejenia w Claude Code — resztę (pipeline, aliasy, raport) robi już on, nie Ty ręcznie w terminalu. Mechanizm w tle: każdy przebieg pipeline'u tworzy migawkę-kandydata (`data/store/YYYY-MM-DD-structural.ndjson`), nigdy nie nadpisuje zaufanego magazynu (`data/store/structural-backfill.ndjson`) — pełne uzasadnienie: `docs/prd.md` v1.3, `docs/stages/04-backfill.md`.
 
-**1. Wrzuciłeś nowy plik do `data/raw/structural/` — wklej:**
+**1. Wrzuciłeś nowy plik do `data/raw/structural/` — wklej prompt, pod nim dopisz ścieżkę pliku:**
 ```
-Wrzuciłem nowy plik do data/raw/structural/: <nazwa>. Uruchom pipeline, obsłuż
-nieznane markery jeśli się pojawią (zapytaj mnie o zatwierdzenie każdego),
-wygeneruj raport z nowej migawki-kandydata i zaczekaj na moją weryfikację —
-nie scalaj z zaufanym magazynem.
+Wrzuciłem nowy plik do data/raw/structural/. Uruchom pipeline, obsłuż nieznane
+markery jeśli się pojawią (zapytaj mnie o zatwierdzenie każdego), wygeneruj
+raport z nowej migawki-kandydata i zaczekaj na moją weryfikację — nie scalaj
+z zaufanym magazynem.
+
+Plik:
 ```
+Sam prompt zostaje bez zmian za każdym razem — dopisujesz tylko ścieżkę pod linią „Plik:", bez edycji tekstu nad nią.
 
 Dostaniesz ścieżki: migawka `data/store/<data>-structural.ndjson`, raport `data/reports/<data>-trendy.md`. Sprawdź kolumnę **„Źródło"** przy nowych wynikach względem oryginału.
 
-**2. Dane poprawne — wklej (uzupełnij datę z kroku 1):**
+**2. Dane poprawne — wklej prompt, pod nim dopisz ścieżkę migawki z kroku 1:**
 ```
-Zweryfikowałem data/store/<data>-structural.ndjson (raport
-data/reports/<data>-trendy.md) — dane poprawne. Scal z zaufanym magazynem
-data/store/structural-backfill.ndjson.
+Zweryfikowałem migawkę wskazaną poniżej — dane poprawne. Scal ją z zaufanym
+magazynem data/store/structural-backfill.ndjson.
+
+Migawka:
 ```
 
 Dopiero teraz dane liczą się „na serio" — BigQuery i dalsza analiza czytają wyłącznie zaufany magazyn. Procedura odświeżenia tabeli (zawsze replace, nigdy append): `docs/stages/03-storage-analysis.md`.

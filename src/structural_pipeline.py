@@ -17,6 +17,7 @@ import json
 import re
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 import yaml
@@ -280,7 +281,7 @@ def parse_section_chunk(chunk: list[str], inline_val: str | None):
 
 def _record(panel, marker, name_raw, value, value_text, unit, lo, hi, date, source, note=None) -> dict:
     return {
-        "record_type": "structural", "panel": panel, "marker": marker,
+        "panel": panel, "marker": marker,
         "marker_raw": name_raw, "value": value, "value_text": value_text,
         "unit": unit, "reference_low": lo, "reference_high": hi, "reference_note": note,
         "exam_date": date, "source_file": source,
@@ -524,12 +525,17 @@ def main() -> int:
         else:
             print(f"[{i}/{len(docs)}] {doc.name[:40]:40s} rekordów={len(recs):3d} nieznanych={len(unknown):2d}", flush=True)
 
-    # zapis NDJSON (dev: nadpisujemy; produkcyjnie append-only)
-    out = STORE / "structural.ndjson"
+    # Migawka datowana — NIGDY nie nadpisuje zaufanego magazynu (structural-backfill.ndjson).
+    # Scalenie ("promocja" kandydata do zaufanego pliku) wymaga ręcznej weryfikacji
+    # operatora (raport wygenerowany z tej migawki) i jest wykonywane osobno.
+    out = STORE / f"{date.today().isoformat()}-structural.ndjson"
     with out.open("w", encoding="utf-8") as fh:
         for r in all_records:
             fh.write(json.dumps(r, ensure_ascii=False) + "\n")
-    print(f"\nZapisano {len(all_records)} rekordów -> {out}")
+    trusted = STORE / "structural-backfill.ndjson"
+    print(f"\nZapisano {len(all_records)} rekordów -> {out} (KANDYDAT, nie zaufany magazyn)")
+    print(f"Podejrzyj raport z tej migawki: uv run python src/report.py {out}")
+    print(f"Po weryfikacji poproś o scalenie z {trusted}")
     if rejected:
         print(f"Odrzuconych (nieczytelny OCR): {len(rejected)}/{len(docs)} -> {', '.join(rejected)}")
     if silent_zero:

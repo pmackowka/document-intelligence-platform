@@ -1,7 +1,7 @@
 # Etap 3 — Magazyn NDJSON i analiza trendów
 
 ## Cel
-Warstwa, dla której to wszystko powstało: magazyn z osią czasu (`data/store/structural.ndjson`, wyjście etapu 2) i odpytywanie trendów przez Claude Code w terminalu (S2), plus zgodność ze schematem BigQuery bez transformacji (S4).
+Warstwa, dla której to wszystko powstało: magazyn z osią czasu (`data/store/structural-backfill.ndjson`, wyjście etapu 2) i odpytywanie trendów przez Claude Code w terminalu (S2), plus zgodność ze schematem BigQuery bez transformacji (S4).
 
 Sedno: to nie jest budowa silnika zapytań. PRD świadomie nie przewiduje dedykowanego narzędzia do trendów — Scope pkt 6 mówi wprost: konsumpcja to „Claude Code w terminalu czyta pliki; analiza trendów/porównań markerów przez prompt". Rola tego etapu to dowieść, że płaski, jednorodny schemat NDJSON (`marker`, `value`, `unit`, `exam_date`, `reference_low/high`) wystarcza, żeby odpowiedzieć na pytanie o trend bez pośredniego kodu zapytań — a tam, gdzie kod jest realnie potrzebny (raport na wizytę, walidacja pod BigQuery), zbudować dokładnie tyle, ile trzeba, nie więcej.
 
@@ -58,11 +58,11 @@ Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, ni
 
 **Pułapki:** sam load NDJSON do BigQuery jest świadomie ręczny (PRD: „Automatyczny load do BigQuery" poza zakresem V1) — wymaga projektu/kont GCP, których nie mam. Ten etap dostarcza walidację i pewność, że load się powinien udać, nie wykonuje go za operatora. Automatyzacja (np. `bq load` z terminala) to kandydat na przyszłość — zmiana zakresu, wymaga aktualizacji PRD, nie robimy tego po cichu.
 
-### Instrukcja: ręczny load `structural.ndjson` do BigQuery (konsola GCP) — procedura CYKLICZNA
+### Instrukcja: ręczny load `structural-backfill.ndjson` do BigQuery (konsola GCP) — procedura CYKLICZNA
 
 **Decyzja:** load przez UI konsoli GCP (Create table → Upload), nie `bq` CLI — operator woli klikać, ma pełną kontrolę nad każdym krokiem i widzi błędy bezpośrednio w przeglądarce. Za każdym razem, gdy chcesz odświeżyć dane w BigQuery (nie tylko przy pierwszym loadzie) — **zawsze pełny replace tabeli (Krok 0 + Krok 1), nigdy append**.
 
-**Dlaczego replace, nie append:** `structural_pipeline.py` przy każdym uruchomieniu przetwarza WSZYSTKIE dokumenty z `data/raw/structural/` od zera i **nadpisuje** `data/store/structural.ndjson` (`open(out, "w")` — tryb zapisu, nie dopisywania). Plik po każdym uruchomieniu pipeline'u to zawsze pełny, aktualny stan całego magazynu, nie sam przyrost nowych rekordów. Append do BigQuery załadowałby więc też rekordy, które tabela już ma — duplikat całej tabeli przy każdym cyklu. Replace jest bezpieczny, bo źródło prawdy to plik NDJSON, nie sama tabela w BigQuery (którą zawsze można odtworzyć od zera).
+**Dlaczego replace, nie append:** `structural_pipeline.py` przy każdym uruchomieniu przetwarza WSZYSTKIE dokumenty z `data/raw/structural/` od zera i zapisuje wynik do migawki datowanej `data/store/YYYY-MM-DD-structural.ndjson` (nigdy bezpośrednio do zaufanego `structural-backfill.ndjson` — patrz notatka „Migawki datowane + scalenie ręczne" w `docs/stages/04-backfill.md`). Zaufany `structural-backfill.ndjson` zmienia się WYŁĄCZNIE przez ręczne scalenie potwierdzonej migawki, ale efekt jest ten sam co poprzednio: po scaleniu plik zawsze reprezentuje pełny, aktualny stan całego magazynu, nie sam przyrost nowych rekordów. Append do BigQuery załadowałby więc też rekordy, które tabela już ma — duplikat całej tabeli przy każdym cyklu. Replace jest bezpieczny, bo źródło prawdy to plik NDJSON, nie sama tabela w BigQuery (którą zawsze można odtworzyć od zera).
 
 **Jak działa:** pierwszy load (schemat 11 kolumn) przeszedł bez błędów. Schemat od tego czasu rozszerzony o `reference_note` (12. kolumna, patrz notatka „reference_note..." niżej) — tabelę trzeba przeładować od zera, BigQuery nie dokłada kolumn do istniejącej tabeli przez UI uploadu. Ten sam Krok 0 + Krok 1 obowiązuje przy KAŻDYM kolejnym odświeżeniu (np. po dodaniu nowych wyników z etapu „Codzienny flow" w README), nie tylko przy zmianie schematu.
 
@@ -72,13 +72,12 @@ Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, ni
 DROP TABLE `projekt.dataset.structural_markers`;
 ```
 
-To kasuje tabelę razem ze schematem i wszystkimi wierszami — nieodwracalne, ale bezpieczne, bo źródło prawdy to `data/store/structural.ndjson`, nie sama tabela. Alternatywnie: w Explorerze kliknij ⋮ przy tabeli → **Delete** → potwierdź nazwą tabeli.
+To kasuje tabelę razem ze schematem i wszystkimi wierszami — nieodwracalne, ale bezpieczne, bo źródło prawdy to `data/store/structural-backfill.ndjson`, nie sama tabela. Alternatywnie: w Explorerze kliknij ⋮ przy tabeli → **Delete** → potwierdź nazwą tabeli.
 
-**Krok 1+ — załaduj od nowa:** ⋮ przy datasecie → **Create table** → Source „Upload" → plik `data/store/structural.ndjson` → **File format**: `JSONL (Newline delimited JSON)` → Table name jak poprzednio (np. `structural_markers`) → **Schema**: odznacz „Auto detect", **Edit as text**, wklej (12 kolumn — dodana `reference_note`):
+**Krok 1+ — załaduj od nowa:** ⋮ przy datasecie → **Create table** → Source „Upload" → plik `data/store/structural-backfill.ndjson` → **File format**: `JSONL (Newline delimited JSON)` → Table name jak poprzednio (np. `structural_markers`) → **Schema**: odznacz „Auto detect", **Edit as text**, wklej (11 kolumn — `record_type` usunięty, zawsze był stałą „structural" bez informacji od czasu wycięcia narracji z V1):
 
 ```json
 [
-  {"name": "record_type", "type": "STRING", "mode": "REQUIRED"},
   {"name": "panel", "type": "STRING", "mode": "REQUIRED"},
   {"name": "marker", "type": "STRING", "mode": "REQUIRED"},
   {"name": "marker_raw", "type": "STRING", "mode": "REQUIRED"},

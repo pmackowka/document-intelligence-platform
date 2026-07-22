@@ -1,11 +1,13 @@
 # PRD: Document Intelligence Platform — Version 1
 
-> Status: **v1.2 — zatwierdzony** (v1.0: 2026-07-17, po sesji sokratejskiej i 2 rundach review). Wszystkie decyzje produktowe zamknięte.
+> Status: **v1.3 — zatwierdzony** (v1.0: 2026-07-17, po sesji sokratejskiej i 2 rundach review). Wszystkie decyzje produktowe zamknięte.
 > Kontrakt dla wszystkich sesji z agentem. Każda zmiana zakresu = aktualizacja tego pliku + commit.
 >
 > **v1.1 (2026-07-18):** ingest tylko ręczny — usunięty konektor Google Drive.
 >
 > **v1.2 (2026-07-21):** **n8n usunięty z V1.** Powód: architektoniczny rozjazd wykryty przy próbie realnego spięcia (etap 4) — n8n działa w kontenerze Docker (Linux), a silnik OCR to Apple Vision (natywny framework macOS, nie uruchomi się w kontenerze); do tego kontener nie ma dostępu do plików projektu. `Execute Command` z n8n fizycznie nie odpali pipeline'u. Orkiestracja w V1 = uruchomienie ręczne z terminala (`uv run python ...`), spójne z terminal-native charakterem projektu (zero UI). n8n jako narzędzie orkiestracji pozostaje kandydatem na przyszłość — patrz „Do rozważenia" w `docs/roadmap.md` (uruchomienie na VPS zamiast lokalnego Dockera obchodzi problem macOS/Apple Vision, o ile OCR zostanie tam zastąpiony silnikiem serwerowym).
+>
+> **v1.3 (2026-07-22):** **Magazyn: migawki datowane + scalenie ręczne, zamiast bezpośredniego nadpisania.** Powód: backfill ~40 dokumentów ujawnił cztery niezależne rundy błędów w tej samej partii (patrz `docs/stages/04-backfill.md`) — ryzyko, że przyszła poprawka regexa/aliasu przy okazji nowego dokumentu po cichu zmieni wartość w rekordzie już zweryfikowanym przez operatora, jest realne, bo pipeline zawsze przetwarza cały `data/raw/structural/` od zera. `structural_pipeline.py` zapisuje teraz każdy przebieg do osobnej migawki `data/store/YYYY-MM-DD-structural.ndjson`; zaufany `data/store/structural-backfill.ndjson` (używany przez BigQuery i dalszą analizę) zmienia się wyłącznie przez ręczne scalenie potwierdzonej migawki, nie automatycznie.
 
 ---
 
@@ -48,7 +50,7 @@ Progi zatwierdzone przez właściciela (runda review 1).
    - Warstwa 2: regex → ekstrakcja wartości liczbowej,
    - Warstwa 3: weryfikacja LLM dla nieznanych nazw → propozycja aliasu, **operator zatwierdza** przed dopisaniem do słownika (do API idzie wyłącznie nazwa markera — bez PII),
    - normalizacja jednostek (`units.yml`) i zakresów referencyjnych do `reference_low`/`reference_high`.
-4. **Trwały magazyn wyników** z osią czasu — źródło prawdy: katalog **NDJSON**, płaskie rekordy, append-only (decyzja: bez SQLite przy tej skali).
+4. **Trwały magazyn wyników** z osią czasu — źródło prawdy: katalog **NDJSON**, płaskie rekordy. Każdy przebieg pipeline'u zapisuje datowaną migawkę (`YYYY-MM-DD-structural.ndjson`, nigdy nie nadpisywaną) — append-only na poziomie katalogu. Zaufany plik (`structural-backfill.ndjson`, czytany przez BigQuery i raport) zmienia się wyłącznie przez ręczne scalenie potwierdzonej migawki (decyzja: bez SQLite przy tej skali).
 5. **Mechanika zatwierdzania (plikowa):** pipeline zapisuje propozycje aliasów do `pending/*.yml`; operator przegląda i zatwierdza w Claude Code (edycja pliku, przeniesienie do approved); pipeline czyta wyłącznie zatwierdzone wpisy. Bez UI.
 6. **Wyjścia:**
    - kanoniczny **NDJSON** (płaskie rekordy, schemat BigQuery-ready),
@@ -89,7 +91,7 @@ Wymóg prywatności jest **miękki** — to **nie** jest system klasy medycznej;
 - **Silnik:** Python (OCR, standaryzacja, zapis). Kod i nazwy po angielsku, komentarze po polsku.
 - **OCR:** Docling + Apple Vision.
 - **LLM:** wyłącznie Claude w ramach abonamentu Pro (Anthropic) — **zero zakupu tokenów API**. Wywołania programistyczne przez Claude Code w trybie headless (`claude -p "<prompt>"`), uruchamiane z Pythona jako komenda shell. Weryfikacja aliasów: Haiku (przez ten sam CLI, `--model`). Test lokalnego modelu (Ollama) — eksperyment poza zakresem V1.
-- **Dane:** NDJSON płaski, BigQuery-ready; YAML dla wiedzy domenowej; append-only.
+- **Dane:** NDJSON płaski, BigQuery-ready; YAML dla wiedzy domenowej; migawki datowane append-only, zaufany plik scalany ręcznie (v1.3).
 - **Skala:** ~115–120 dokumentów strukturalnych backfill + 2–3/mies. — wydajność nie jest constraintem; priorytet: poprawność i powtarzalność.
 
 ## Ryzyka (nazwane, zaakceptowane lub do mitygacji)

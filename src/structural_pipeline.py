@@ -411,15 +411,16 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
         # --- linia z prefiksem '[XXX]': wewnętrzny kod innego labu, nie (ICD-9: ...) ---
         # Zawsze pojedynczy marker (ten lab nie używa tej notacji na nagłówki paneli/sekcji),
         # więc — inaczej niż wyżej — nie ma gałęzi (a)/(b) na dopasowanie panelu.
-        if _BRACKET_CODE.match(stripped) and not is_noise(stripped):
+        clean = stripped.lstrip("#").strip()  # pogrubiona nazwa markera bywa renderowana jako nagłówek Markdown ("## [I99] ...")
+        if _BRACKET_CODE.match(clean) and not is_noise(clean):
             section_active = True
-            key = norm(stripped)
+            key = norm(clean)
             hit = resolve_section(key)
             if hit:
                 panel, canon = hit
-                anchors.append((i, panel, canon, stripped, None))
+                anchors.append((i, panel, canon, clean, None))
             else:
-                unknown.append((panel or "?", stripped))
+                unknown.append((panel or "?", clean))
             continue
 
         # --- luźna linia w aktywnej sekcji: potencjalny marker-dziecko (nazwa rozstrzyga) ---

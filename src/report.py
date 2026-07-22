@@ -3,10 +3,13 @@
 Czyta data/store/structural.ndjson (magazyn z etapu 2), grupuje rekordy wg panelu
 i markera, sortuje po dacie badania i zapisuje czytelny raport do data/reports/.
 
-Klucz grupowania to (marker, unit), nie sam marker — niektóre markery (różnicowanie
+Grupowanie wewnątrz markera dzieli się po jednostce TYLKO gdy dla danego markera
+istnieją >=2 realne (niepuste) jednostki w danych — niektóre markery (różnicowanie
 morfologii: NEU/LYM/MONO/EOS/BASO) występują w źródle w DWÓCH jednostkach na ten sam
 kod (% i tys/µl, odsetek vs wartość bezwzględna); zlanie ich w jeden ciąg trendu
-pomieszałoby dwie różne skale.
+pomieszałoby dwie różne skale. Gdy realna jednostka jest tylko jedna, rekordy bez
+jednostki (parser jej nie znalazł w konkretnym dokumencie) dołączają do tej jednej —
+inaczej ta sama seria rozpadała się na kilka osobnych tabel bez powodu klinicznego.
 """
 from __future__ import annotations
 
@@ -51,7 +54,7 @@ def load_labels() -> dict:
 
 def fmt_value(r: dict) -> str:
     if r["value"] is not None:
-        return f"{r['value']:g} {r['unit']}".strip()
+        return f"{r['value']:g} {r['unit']}" if r["unit"] else f"{r['value']:g}"
     if r["value_text"] is not None:
         return str(r["value_text"])
     return "—"
@@ -82,29 +85,43 @@ def trend_arrow(values: list[float]) -> str:
 
 
 def build_report(records: list[dict], labels: dict) -> str:
-    by_panel: dict[str, dict[tuple[str, str | None], list[dict]]] = defaultdict(lambda: defaultdict(list))
+    by_panel: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
     for r in records:
-        by_panel[r["panel"]][(r["marker"], r["unit"])].append(r)
+        by_panel[r["panel"]][r["marker"]].append(r)
 
     lines = [f"# Raport trendów — badania strukturalne", "", f"Wygenerowano: {date.today().isoformat()}", ""]
 
     for panel in sorted(by_panel, key=lambda p: PANEL_LABELS.get(p, p)):
         lines.append(f"## {PANEL_LABELS.get(panel, panel)}")
         lines.append("")
-        groups = by_panel[panel]
-        for (marker, unit), rows in sorted(groups.items(), key=lambda kv: labels.get(kv[0][0], kv[0][0])):
-            rows.sort(key=lambda r: r["exam_date"] or "")  # rekordy bez daty (patrz structural_pipeline.py) na początek
-            label = labels.get(marker, marker)
-            numeric = [r["value"] for r in rows if r["value"] is not None]
-            arrow = trend_arrow(numeric)
-            unit_suffix = f" ({unit})" if unit and rows[0]["value"] is not None else ""
-            lines.append(f"### {label}{unit_suffix}{arrow}")
-            lines.append("")
-            lines.append("| Data | Wartość | Zakres ref. |")
-            lines.append("|---|---|---|")
-            for r in rows:
-                lines.append(f"| {r['exam_date'] or 'brak daty'} | {fmt_value(r)} | {fmt_range(r)} |")
-            lines.append("")
+        marker_rows = by_panel[panel]
+        for marker in sorted(marker_rows, key=lambda m: labels.get(m, m)):
+            rows = marker_rows[marker]
+            # Ta sama seria bywa ma jednostkę tylko w części dokumentów (parser jej tam nie
+            # znalazł) — dopóki dla markera istnieje TYLKO JEDNA realna (niepusta) jednostka,
+            # scalamy rekordy bez jednostki do niej zamiast rozbijać trend na kilka tabel.
+            # Gdy realnych jednostek jest >=2 (np. NEU w % i w tys/µl — różne skale), zostają
+            # rozdzielone jak dotąd — nie zgadujemy, do której skali należy brakująca jednostka.
+            real_units = {r["unit"] for r in rows if r["unit"]}
+            if len(real_units) <= 1:
+                sub_groups = {next(iter(real_units), None): rows}
+            else:
+                sub_groups = defaultdict(list)
+                for r in rows:
+                    sub_groups[r["unit"]].append(r)
+            for unit, sub_rows in sorted(sub_groups.items(), key=lambda kv: kv[0] or ""):
+                sub_rows = sorted(sub_rows, key=lambda r: r["exam_date"] or "")
+                label = labels.get(marker, marker)
+                numeric = [r["value"] for r in sub_rows if r["value"] is not None]
+                arrow = trend_arrow(numeric)
+                unit_suffix = f" ({unit})" if unit and any(r["value"] is not None for r in sub_rows) else ""
+                lines.append(f"### {label}{unit_suffix}{arrow}")
+                lines.append("")
+                lines.append("| Data | Wartość | Zakres ref. |")
+                lines.append("|---|---|---|")
+                for r in sub_rows:
+                    lines.append(f"| {r['exam_date'] or 'brak daty'} | {fmt_value(r)} | {fmt_range(r)} |")
+                lines.append("")
 
     return "\n".join(lines)
 

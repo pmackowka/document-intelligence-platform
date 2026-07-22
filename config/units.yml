@@ -28,3 +28,5 @@ aliases:
   "ng/dl": "ng/dl"
   "ng/ml": "ng/ml"
   "mm/h": "mm/h"
+  "mmol/l": "mmol/l"
+  "mmol/1": "mmol/l"        # OCR: l -> 1

@@ -75,6 +75,21 @@ def fmt_range(r: dict) -> str:
     return "—"
 
 
+def flag(r: dict) -> str:
+    """Flaga poza normą — wyliczona z value vs reference_low/high, nie odczytana z OCR
+    (źródło samo ma taką kolumnę, ale jej nie parsujemy — ta sama informacja wynika już
+    z wartości i zakresu, które i tak mamy)."""
+    v = r.get("value")
+    if v is None:
+        return ""
+    lo, hi = r.get("reference_low"), r.get("reference_high")
+    if hi is not None and v > hi:
+        return "H"
+    if lo is not None and v < lo:
+        return "L"
+    return ""
+
+
 def trend_arrow(values: list[float]) -> str:
     """Kierunek między pierwszym a ostatnim pomiarem liczbowym w serii (>=2 punkty)."""
     if len(values) < 2:
@@ -119,10 +134,10 @@ def build_report(records: list[dict], labels: dict) -> str:
                 unit_suffix = f" ({unit})" if unit and any(r["value"] is not None for r in sub_rows) else ""
                 lines.append(f"### {label}{unit_suffix}{arrow}")
                 lines.append("")
-                lines.append("| Data | Wartość | Zakres ref. | Źródło |")
-                lines.append("|---|---|---|---|")
+                lines.append("| Data | Wartość | Zakres ref. | Flaga | Źródło |")
+                lines.append("|---|---|---|---|---|")
                 for r in sub_rows:
-                    lines.append(f"| {r['exam_date'] or 'brak daty'} | {fmt_value(r, unit)} | {fmt_range(r)} | {r['source_file']} |")
+                    lines.append(f"| {r['exam_date'] or 'brak daty'} | {fmt_value(r, unit)} | {fmt_range(r)} | {flag(r)} | {r['source_file']} |")
                 lines.append("")
 
     return "\n".join(lines)

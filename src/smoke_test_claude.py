@@ -1,9 +1,9 @@
 """Smoke test wywołań Claude Code w trybie headless (`claude -p`) z Pythona.
 
-Sprawdza ścieżkę, której użyje pipeline: Python (a przez niego n8n) woła
-`claude -p` jako komendę shell (subprocess), korzystając z zalogowanej
-subskrypcji Pro — bez klucza API Anthropic i bez zakupu tokenów. Testuje
-model domyślny oraz jawny `--model haiku` (tani model do weryfikacji aliasów).
+Sprawdza ścieżkę, której użyje pipeline: Python woła `claude -p` jako komendę
+shell (subprocess), korzystając z zalogowanej subskrypcji Pro — bez klucza API
+Anthropic i bez zakupu tokenów. Testuje model domyślny oraz jawny
+`--model haiku` (tani model do weryfikacji aliasów).
 """
 from __future__ import annotations
 

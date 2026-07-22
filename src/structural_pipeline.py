@@ -83,7 +83,16 @@ _ICD9 = re.compile(r"ICD-9:\s*([A-Z]\d+)")            # ścisły: kod panelu w k
 _ICD9_LOOSE = re.compile(r"\(ICD-9:\s*([^)]*)\)")     # luźny: dowolny kod inline (też "-", "055")
 _BRACKET_CODE = re.compile(r"^\[[A-Z0-9]+\]\s*\S")    # inny lab, wewnętrzny kod jako PREFIKS: "[L23] Fosforany"
 _RANGE = re.compile(r"^(\d+(?:[.,]\d+)?)\s+(\d+(?:[.,]\d+)?)(?:\s+[HLNhln*])?$")  # "115,00 190,00 H"
-_DATE = re.compile(r"Data wykonania\s*:?\s*(\d{2})\.(\d{2})\.(\d{4})")
+# Etap 4 (backfill): pierwotnie tylko jeden format jednego labu ("Data wykonania: DD.MM.YYYY").
+# Inne laby piszą tę samą informację innym słowem/formatem — 27% rekordów zostawało bez daty,
+# mimo że data była wprost w tekście. Kolejność ma znaczenie: pierwsze trafienie wygrywa, więc
+# oryginalny wzorzec zostaje pierwszy (zero ryzyka regresji na już poprawnie działających dok.).
+_DATE_FORMATS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"Data wykonania\s*:?\s*(\d{2})\.(\d{2})\.(\d{4})"), "dmy"),
+    (re.compile(r"Data(?:/godz\.?)?\s*(?:rejestracji|pobrania)\s*:?\s*(\d{4})-(\d{2})-(\d{2})"), "ymd"),
+    (re.compile(r"data i godz(?:ina)?\.?\s*pobrania\s*:?\s*(\d{2})-(\d{2})-(\d{4})"), "dmy"),
+    (re.compile(r"data i godz\.?\s*przyj[ęe]cia\s*:?\s*(\d{2})-(\d{2})-(\d{4})"), "dmy"),  # fallback: kolekcji "nie podano"
+]
 
 
 def to_num(cell: str):
@@ -94,14 +103,46 @@ def to_num(cell: str):
     return None
 
 
+# Etap 4 (backfill): niektóre laby nie mają osobnych kolumn jednostka|MIN|MAX — zakres
+# referencyjny przychodzi jako JEDNA komórka ("17,1 — 77,6" albo jednostronnie "< 5,61"),
+# czasem w miejscu, gdzie pozycyjny parser oczekuje jednostki. Bez tej detekcji taka komórka
+# była cicho zapisywana jako "jednostka" (dane błędne, nie tylko brakujące — gorsze niż NULL).
+# Limit 1-3 cyfr przed przecinkiem odróżnia realny zakres referencyjny od zlepionej przez OCR
+# daty w sąsiedniej kolumnie (np. "14-52026" ma 5 cyfr po myślniku -> odrzucone, nie zakres).
+_RANGE_CELL = re.compile(r"^(-?\d{1,3}(?:[.,]\d+)?)\s*[-—–]\s*(-?\d{1,3}(?:[.,]\d+)?)$")
+_BOUND_CELL = re.compile(r"^([<>≤≥])\s*(\d{1,3}(?:[.,]\d+)?)$")
+
+
+def _range_from_cell(cell: str | None) -> tuple[float | None, float | None]:
+    """Rozpoznaje komórkę-zakres ('17,1 — 77,6') albo jednostronną granicę ('< 5,61').
+    Zwraca (lo, hi) albo (None, None), jeśli komórka nie ma takiego kształtu."""
+    if not cell:
+        return None, None
+    c = cell.strip()
+    m = _RANGE_CELL.match(c)
+    if m:
+        return to_num(m.group(1)), to_num(m.group(2))
+    m = _BOUND_CELL.match(c)
+    if m:
+        op, num = m.groups()
+        val = to_num(num)
+        return (None, val) if op in "<≤" else (val, None)
+    return None, None
+
+
 def canon_unit(cell: str):
     cell = html.unescape(cell).strip()  # Docling escapuje '|' (delimiter tabeli) jako &#124;
     return UNITS.get(norm(cell), cell or None) if cell else None
 
 
 def exam_date(text: str):
-    m = _DATE.search(text)
-    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else None
+    for pattern, order in _DATE_FORMATS:
+        m = pattern.search(text)
+        if not m:
+            continue
+        y, mo, d = m.groups() if order == "ymd" else m.groups()[::-1]
+        return f"{y}-{mo}-{d}"
+    return None
 
 
 def split_row(line: str) -> list[str]:
@@ -226,8 +267,8 @@ def _record(panel, marker, name_raw, value, value_text, unit, lo, hi, date, sour
     }
 
 
-def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, str]]]:
-    """Zwraca (rekordy, nieznane). Dwie ścieżki, wybierane per-linia:
+def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, str]], list[tuple[str, str]]]:
+    """Zwraca (rekordy, nieznane, wątpliwe_wiersze). Dwie ścieżki, wybierane per-linia:
 
     - TABELA (linia zaczyna się od '|'): parsowanie pozycyjne nazwa|wynik|jedn|MIN|MAX.
     - SEKCJA (format luźny): marker to linia z inline '(ICD-9: kod)' albo nazwa-dziecko pod
@@ -235,12 +276,14 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
 
     Gwarancja S1 (nie gubić po cichu): nierozpoznana nazwa w tabeli oraz nierozpoznana linia
     markera z realnym kodem ICD w sekcji trafiają do `unknown` (Warstwa 3), nigdy nie znikają.
+    `wątpliwe_wiersze` to inny przypadek: nazwa markera ROZPOZNANA, ale komórka z wynikiem
+    pusta/nietypowa (nietypowy układ tabeli) — do ręcznego przeglądu, nie do Warstwy 3.
     """
     date = exam_date(text)
     lines = text.splitlines()
     panel = None
     section_active = False
-    records, unknown = [], []
+    records, unknown, bad_rows = [], [], []
     anchors: list[tuple[int, str, str, str, str | None]] = []  # (idx, panel, kanon, nazwa_raw, inline_val)
 
     for i, line in enumerate(lines):
@@ -270,13 +313,25 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
                 unknown.append((row_panel or "?", name_raw))
                 continue
             value = to_num(cells[1])
-            records.append(_record(
-                row_panel, marker, name_raw, value,
-                None if value is not None else (cells[1] or None),
-                canon_unit(cells[2]) if len(cells) > 2 else None,
-                to_num(cells[3]) if len(cells) > 3 else None,
-                to_num(cells[4]) if len(cells) > 4 else None,
-                date, source))
+            value_text = None if value is not None else (cells[1] or None)
+            if value is None and value_text is None:
+                # kolumna "wynik" pusta — u niektórych labów realny wynik przesuwa się do sąsiedniej
+                # komórki (obserwowane: wiersze oflagowane jako poza normą, etap 4 backfill). Nie
+                # zgadujemy, która komórka to naprawdę wynik — do ręcznego przeglądu, nie pusty rekord.
+                bad_rows.append((source, name_raw))
+                continue
+            cell2 = cells[2] if len(cells) > 2 else None
+            cell3 = cells[3] if len(cells) > 3 else None
+            lo, hi = _range_from_cell(cell2)
+            if (lo, hi) != (None, None):
+                unit = None                              # kolumna "jednostka" niosła zakres, nie jednostkę
+            else:
+                lo, hi = _range_from_cell(cell3)
+                unit = canon_unit(cell2) if cell2 else None
+                if (lo, hi) == (None, None):               # ani cell2 ani cell3 nie wygląda na zakres ->
+                    lo = to_num(cell3) if cell3 else None    # oryginalna logika: MIN/MAX jako 2 osobne liczby
+                    hi = to_num(cells[4]) if len(cells) > 4 else None
+            records.append(_record(row_panel, marker, name_raw, value, value_text, unit, lo, hi, date, source))
             continue
 
         # --- linia z inline '(ICD-9: kod)': nagłówek panelu / marker sekcyjny / nagłówek grupy ---
@@ -334,7 +389,7 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
             continue  # anchor-widmo (np. nazwa markera powtórzona w nagłówku sekcji) — brak treści, pomiń
         records.append(_record(p, canon, name_raw, value, value_text, unit, lo, hi, date, source, note))
 
-    return records, unknown
+    return records, unknown, bad_rows
 
 
 _CODE_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,29}")
@@ -424,15 +479,16 @@ def main() -> int:
     STORE.mkdir(parents=True, exist_ok=True)
     PENDING.mkdir(parents=True, exist_ok=True)
 
-    all_records, all_unknown, rejected, silent_zero = [], {}, [], []
+    all_records, all_unknown, rejected, silent_zero, all_bad_rows = [], {}, [], [], []
     for i, doc in enumerate(docs, 1):
         text = ocr_markdown(doc)
         if len(text) < MIN_OCR_CHARS:
             rejected.append(doc.name)
             print(f"[{i}/{len(docs)}] {doc.name[:40]:40s} ODRZUCONY — OCR {len(text)} znaków (< {MIN_OCR_CHARS})", flush=True)
             continue
-        recs, unknown = parse_document(text, doc.stem)
+        recs, unknown, bad_rows = parse_document(text, doc.stem)
         all_records.extend(recs)
+        all_bad_rows.extend(bad_rows)
         for panel, name in unknown:
             all_unknown.setdefault((panel, norm(name)), (panel, name))
         if not recs and not unknown:
@@ -454,6 +510,9 @@ def main() -> int:
         print(f"Odrzuconych (nieczytelny OCR): {len(rejected)}/{len(docs)} -> {', '.join(rejected)}")
     if silent_zero:
         print(f"Bez treści rozpoznanej (sprawdź ręcznie): {len(silent_zero)}/{len(docs)} -> {', '.join(silent_zero)}")
+    if all_bad_rows:
+        listing = ", ".join(f"{src}: {name}" for src, name in all_bad_rows)
+        print(f"⚠ Wiersze z rozpoznanym markerem, ale bez możliwego do ustalenia wyniku (sprawdź układ tabeli w OCR): {len(all_bad_rows)} -> {listing}")
 
     # Warstwa 3: propozycje aliasów dla nieznanych -> pending/ (odporne na wznowienie po przerwaniu)
     pend = PENDING / "aliases.yml"

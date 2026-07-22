@@ -385,8 +385,12 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
     for n, (i, p, canon, name_raw, inline_val) in enumerate(anchors):
         end = idxs[n + 1] if n + 1 < len(anchors) else len(lines)
         value, value_text, unit, lo, hi, note = parse_section_chunk(lines[i + 1:end], inline_val)
-        if value is None and value_text is None and unit is None and lo is None and hi is None and note is None:
-            continue  # anchor-widmo (np. nazwa markera powtórzona w nagłówku sekcji) — brak treści, pomiń
+        if value is None and value_text is None:
+            if unit is not None or lo is not None or hi is not None or note is not None:
+                # jednostka/zakres znalezione, ale sam wynik nie -> realny problem parsowania
+                # (etap 4 audyt: CRP z jednostką "ng/ml" i pustym wynikiem), do ręcznego przeglądu
+                bad_rows.append((source, name_raw))
+            continue  # inaczej: anchor-widmo (nazwa markera powtórzona w nagłówku) — brak treści, cichy pomiń
         records.append(_record(p, canon, name_raw, value, value_text, unit, lo, hi, date, source, note))
 
     return records, unknown, bad_rows

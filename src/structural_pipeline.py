@@ -119,7 +119,9 @@ def _range_from_cell(cell: str | None) -> tuple[float | None, float | None]:
     Zwraca (lo, hi) albo (None, None), jeśli komórka nie ma takiego kształtu."""
     if not cell:
         return None, None
-    c = cell.strip()
+    # Dopisek w nawiasie ("(Parametr nieakredytowany)", przed albo po liczbach) łamał ścisłe
+    # dopasowanie całej komórki — usuwamy go, zakres zostaje ("0,00 - 0,01 (Parametr...)" -> "0,00 - 0,01").
+    c = re.sub(r"\([^)]*\)", "", cell).strip()
     m = _RANGE_CELL.match(c)
     if m:
         return to_num(m.group(1)), to_num(m.group(2))
@@ -223,6 +225,7 @@ def parse_section_chunk(chunk: list[str], inline_val: str | None):
     """
     value = value_text = unit = None
     range_nums: list[float] = []
+    dash_range: tuple[float | None, float | None] | None = None
     note_parts: list[str] = []
     if inline_val:                       # wartość w tej samej linii co nazwa ("Kwas moczowy (...) 5,6")
         value = _num(inline_val)
@@ -253,6 +256,11 @@ def parse_section_chunk(chunk: list[str], inline_val: str | None):
         if mr:
             range_nums += [float(mr.group(1).replace(",", ".")), float(mr.group(2).replace(",", "."))]
             continue
+        if dash_range is None:
+            mrc = _RANGE_CELL.match(s)                   # "2,15 - 2,50" -> zakres myślnikowy, inny kształt
+            if mrc:                                       # niż "MIN MAX" wyżej (był już obsłużony w tabeli,
+                dash_range = (to_num(mrc.group(1)), to_num(mrc.group(2)))  # brakował w sekcji)
+                continue
         if re.fullmatch(r"\d{6,}", s):                   # PESEL / ID / telefon — nigdy wynik ani zakres
             continue
         n = _num(s)                                      # pojedyncza liczba
@@ -271,7 +279,9 @@ def parse_section_chunk(chunk: list[str], inline_val: str | None):
             note_parts.append(s)
 
     lo = hi = None
-    if len(range_nums) >= 2:
+    if dash_range is not None:
+        lo, hi = dash_range
+    elif len(range_nums) >= 2:
         lo, hi = sorted(range_nums[:2])                  # OCR bywa odwraca kolejność MIN/MAX -> sortuj
     elif len(range_nums) == 1:
         hi = range_nums[0]                               # pojedynczy próg referencyjny -> górna granica
@@ -343,6 +353,9 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
                 continue
             cell2 = cells[2] if len(cells) > 2 else None
             cell3 = cells[3] if len(cells) > 3 else None
+            if cell2 == cells[1]:              # kolumna "jednostka" bywa zduplikowanym wynikiem, nie
+                cell2 = None                    # jednostką (nietypowa 5-kolumnowa tabela, np. kał) —
+                                                 # widoczny błąd: pH 6,0 dostawał unit="6,0" ("6 6,0" w raporcie)
             lo, hi = _range_from_cell(cell2)
             if (lo, hi) != (None, None):
                 unit = None                              # kolumna "jednostka" niosła zakres, nie jednostkę
@@ -371,7 +384,13 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
             if hit:
                 panel, canon = hit
                 section_active = True
-                anchors.append((i, panel, canon, name_before, line[m.end():].strip() or None))
+                tail = line[m.end():].strip()
+                # Pojedynczy znak po kodzie ICD (cyfra, apostrof) to odnośnik do przypisu/stopki
+                # ("Fosfor nieorganiczny (ICD-9: L23) 2" -> przypis 2, nie wynik) — realny wynik
+                # inline ("Kwas moczowy (...) 5,6") ma zawsze >=2 znaki. Bez tego progu przypis
+                # podmieniał prawdziwy wynik (z dalszej linii chunku) na samą cyfrę odnośnika.
+                inline_val = tail if len(tail) >= 2 else None
+                anchors.append((i, panel, canon, name_before, inline_val))
                 continue
             # (d) nierozpoznana linia markera z ICD -> flaguj, o ile kod wygląda realnie (nie "-")
             section_active = True

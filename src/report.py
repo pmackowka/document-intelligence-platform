@@ -93,7 +93,7 @@ def build_report(records: list[dict], labels: dict) -> str:
         lines.append("")
         groups = by_panel[panel]
         for (marker, unit), rows in sorted(groups.items(), key=lambda kv: labels.get(kv[0][0], kv[0][0])):
-            rows.sort(key=lambda r: r["exam_date"])
+            rows.sort(key=lambda r: r["exam_date"] or "")  # rekordy bez daty (patrz structural_pipeline.py) na początek
             label = labels.get(marker, marker)
             numeric = [r["value"] for r in rows if r["value"] is not None]
             arrow = trend_arrow(numeric)
@@ -103,7 +103,7 @@ def build_report(records: list[dict], labels: dict) -> str:
             lines.append("| Data | Wartość | Zakres ref. |")
             lines.append("|---|---|---|")
             for r in rows:
-                lines.append(f"| {r['exam_date']} | {fmt_value(r)} | {fmt_range(r)} |")
+                lines.append(f"| {r['exam_date'] or 'brak daty'} | {fmt_value(r)} | {fmt_range(r)} |")
             lines.append("")
 
     return "\n".join(lines)

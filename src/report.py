@@ -1,6 +1,6 @@
 """Etap 3 — raport Markdown "do lekarza": trendy markerów strukturalnych.
 
-Czyta data/store/structural.ndjson (magazyn z etapu 2), grupuje rekordy wg panelu
+Czyta data/store/structural-backfill.ndjson (zaufany magazyn), grupuje rekordy wg panelu
 i markera, sortuje po dacie badania i zapisuje czytelny raport do data/reports/.
 
 Grupowanie wewnątrz markera dzieli się po jednostce TYLKO gdy dla danego markera
@@ -14,6 +14,7 @@ inaczej ta sama seria rozpadała się na kilka osobnych tabel bez powodu klinicz
 from __future__ import annotations
 
 import json
+import sys
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -21,7 +22,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-STORE = ROOT / "data" / "store" / "structural.ndjson"
+STORE = ROOT / "data" / "store" / "structural-backfill.ndjson"
 LABELS = ROOT / "config" / "marker_labels.yml"
 REPORTS = ROOT / "data" / "reports"
 
@@ -40,10 +41,10 @@ PANEL_LABELS = {
 }
 
 
-def load_records() -> list[dict]:
-    if not STORE.exists():
+def load_records(store_path: Path = STORE) -> list[dict]:
+    if not store_path.exists():
         return []
-    with STORE.open(encoding="utf-8") as fh:
+    with store_path.open(encoding="utf-8") as fh:
         return [json.loads(line) for line in fh if line.strip()]
 
 
@@ -52,9 +53,10 @@ def load_labels() -> dict:
     return (data or {}).get("labels", {})
 
 
-def fmt_value(r: dict) -> str:
+def fmt_value(r: dict, group_unit: str | None = None) -> str:
     if r["value"] is not None:
-        return f"{r['value']:g} {r['unit']}" if r["unit"] else f"{r['value']:g}"
+        unit = r["unit"] or group_unit  # rekord bez własnej jednostki -> jednostka reszty serii
+        return f"{r['value']:g} {unit}" if unit else f"{r['value']:g}"
     if r["value_text"] is not None:
         return str(r["value_text"])
     return "—"
@@ -117,19 +119,22 @@ def build_report(records: list[dict], labels: dict) -> str:
                 unit_suffix = f" ({unit})" if unit and any(r["value"] is not None for r in sub_rows) else ""
                 lines.append(f"### {label}{unit_suffix}{arrow}")
                 lines.append("")
-                lines.append("| Data | Wartość | Zakres ref. |")
-                lines.append("|---|---|---|")
+                lines.append("| Data | Wartość | Zakres ref. | Źródło |")
+                lines.append("|---|---|---|---|")
                 for r in sub_rows:
-                    lines.append(f"| {r['exam_date'] or 'brak daty'} | {fmt_value(r)} | {fmt_range(r)} |")
+                    lines.append(f"| {r['exam_date'] or 'brak daty'} | {fmt_value(r, unit)} | {fmt_range(r)} | {r['source_file']} |")
                 lines.append("")
 
     return "\n".join(lines)
 
 
 def main() -> int:
-    records = load_records()
+    # Bez argumentu: zaufany magazyn (STORE). Z argumentem: podejrzenie dowolnej
+    # migawki-kandydata (`data/store/YYYY-MM-DD-structural.ndjson`) przed scaleniem.
+    store_path = Path(sys.argv[1]) if len(sys.argv) > 1 else STORE
+    records = load_records(store_path)
     if not records:
-        print("Brak rekordów w data/store/structural.ndjson — najpierw uruchom structural_pipeline.py")
+        print(f"Brak rekordów w {store_path} — najpierw uruchom structural_pipeline.py")
         return 1
     labels = load_labels()
     report = build_report(records, labels)
@@ -140,7 +145,8 @@ def main() -> int:
 
     n_panels = len({r["panel"] for r in records})
     n_series = len({(r["panel"], r["marker"], r["unit"]) for r in records})
-    print(f"Raport: {len(records)} rekordów, {n_panels} paneli, {n_series} serii marker/jednostka -> {out}")
+    mode = "zaufany magazyn" if store_path == STORE else "KANDYDAT"
+    print(f"Raport ({mode}, źródło: {store_path.name}): {len(records)} rekordów, {n_panels} paneli, {n_series} serii marker/jednostka -> {out}")
     return 0
 
 

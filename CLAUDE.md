@@ -18,7 +18,7 @@ Zasady przekrojowe:
 
 - **Human-in-the-loop obowiązkowy**: propozycje aliasów trafiają do `pending/*.yml`; pipeline czyta wyłącznie zatwierdzone wpisy. Operator zatwierdza edytując pliki w Claude Code.
 - **Reguła prywatności**: do API/LLM idzie wyłącznie nazwa markera (Warstwa 3, weryfikacja nieznanych nazw) — nigdy pełna treść dokumentu.
-- **Magazyn danych**: katalog NDJSON, płaskie rekordy append-only, schemat BigQuery-ready (ręczny load; bez SQLite, bez bazy).
+- **Magazyn danych**: katalog NDJSON, płaskie rekordy, schemat BigQuery-ready (ręczny load; bez SQLite, bez bazy). Zaufany plik: `data/store/structural-backfill.ndjson`. **Każdy przebieg `structural_pipeline.py` zapisuje osobną, datowaną migawkę (`data/store/YYYY-MM-DD-structural.ndjson`) — kod NIGDY nie nadpisuje `structural-backfill.ndjson` bezpośrednio.** Ten plik zmienia się wyłącznie przez ręczne scalenie (kopię) potwierdzonej migawki, na wyraźną prośbę operatora po jego weryfikacji raportu — nie automatycznie przy każdym uruchomieniu. Nie „upraszczaj" tego z powrotem do bezpośredniego zapisu — to świadoma bariera przed cichym dryfem już zweryfikowanych danych (PRD v1.3; pełne uzasadnienie i mechanizm: `docs/stages/04-backfill.md`, notatki „Migawki datowane + scalenie ręczne" i „Nazwa zaufanego pliku").
 - **Wiedza domenowa w YAML**, nie w kodzie: `aliases.yml` (panel-aware, pole `format: table|section`), `units.yml`, `marker_labels.yml` (kod kanoniczny → polska etykieta do raportów), `reference_ranges.yml`, `laboratories.yml`. Dodanie laboratorium/panelu nie może wymagać zmiany kodu.
 - **Ścieżki artefaktów (reguła prywatności)**: wszystko, co zawiera treść medyczną — surowe dokumenty, `pending/` (propozycje aliasów/ustaleń), magazyn NDJSON — żyje pod `data/` (w `.gitignore`). Wersjonowane są wyłącznie `config/` (YAML domenowy bez PII), kod i docs. Nigdy nie twórz plików z treścią medyczną poza `data/`.
 
@@ -29,7 +29,7 @@ Zasady przekrojowe:
   | `data/raw/structural/` | surowe dok. strukturalne (krew/mocz) | **surowy** | lokalnie | ingest (próbka: etap 1) |
   | `data/interim/` | wyjście pośrednie: OCR-owany MD/JSON | **pośredni** | lokalnie | etap 1 (OCR) |
   | `data/pending/` | propozycje aliasów do zatwierdzenia | kontrola (HITL) | lokalnie | etap 2 |
-  | `data/store/` | magazyn NDJSON — źródło prawdy, BigQuery-ready | **finalny — dane** | lokalnie | etap 2, 4 |
+  | `data/store/` | migawki datowane (kandydaci) + `structural-backfill.ndjson` (zaufany, scalany ręcznie) | **finalny — dane** | lokalnie | etap 2, 4 |
   | `data/reports/` | **finalne** raporty Markdown (trendy, na wizytę) | **finalny — raport** | lokalnie | etap 3 |
 
   Podfoldery `data/` istnieją tylko lokalnie (git nie śledzi ignorowanych ścieżek) — kod pipeline'u tworzy je przy starcie (`mkdir -p`).

@@ -20,39 +20,29 @@ uv sync                 # odtworzenie środowiska z uv.lock
 uv run python <skrypt>  # uruchomienie kodu w środowisku projektu
 ```
 
-## Codzienny flow — dodawanie nowych wyników (po zakończeniu backfillu)
+## Codzienny flow — dodawanie nowych wyników
 
-Docelowe tempo z PRD: 2–3 nowe dokumenty/mies. Za każdym razem te same kroki:
+Dwa gotowe prompty do wklejenia w Claude Code — resztę (pipeline, aliasy, raport) robi już on, nie Ty ręcznie w terminalu. Mechanizm w tle: każdy przebieg pipeline'u tworzy migawkę-kandydata (`data/store/YYYY-MM-DD-structural.ndjson`), nigdy nie nadpisuje zaufanego magazynu (`data/store/structural-backfill.ndjson`) — pełne uzasadnienie: `docs/prd.md` v1.3, `docs/stages/04-backfill.md`.
 
-**1. Wrzuć plik(i)** — skan/zdjęcie/PDF nowego wyniku do `data/raw/structural/` (Finder albo terminal, bez znaczenia).
-
-**2. Uruchom pipeline:**
-```bash
-cd /Users/p/Documents/dev/Document-Intelligence-Platform
-PYTHONPATH=src uv run python src/structural_pipeline.py
+**1. Wrzuciłeś nowy plik do `data/raw/structural/` — wklej:**
 ```
-Co się dzieje: OCR (tylko dla nowych plików — stare są w cache, więc szybko) → dopasowanie markerów do słownika `config/aliases.yml` → wyciągnięcie wartości/jednostki/zakresu → zapis **wszystkich** dokumentów (starych + nowych) do `data/store/structural.ndjson`. Jeśli trafi na nazwę markera, której słownik nie zna — pyta Haiku o propozycję kodu, ale **nie ufa jej automatycznie**.
-
-**3. Przeczytaj podsumowanie w terminalu** — ostatnie linie mówią wprost, czy coś wymaga Twojej uwagi:
-- `Brak nieznanych markerów — wszystkie zmapowane.` → gotowe, przejdź do kroku 5.
-- `Warstwa 3: N nieznanych nazw -> Haiku proponuje aliasy...` → przejdź do kroku 4.
-- `Odrzuconych (nieczytelny OCR): N/M` → ten plik nie wszedł do wyników w ogóle; sprawdź skan ręcznie (kąt, ostrość, czy to na pewno badanie krwi/moczu).
-
-**4. Jeśli były nieznane markery — zajrzyj do `data/pending/aliases.yml`.** To propozycje Haiku, nie zatwierdzony słownik — pipeline ich jeszcze nie używa. **Dlaczego to musisz zrobić ręcznie:** zły kod nadany raz (np. „Kreatynina" pomylona z „Kreatynina w moczu") zostałby na stałe, cicho psując każdy przyszły wynik z tą nazwą — nie ma tu miejsca na automatyczne zaufanie. Popraw kod jeśli trzeba, potem **przenieś wpis do `config/aliases.yml`** (właściwy panel, sekcja `markers`) i usuń go z `pending/`.
-
-**5. Jeśli zatwierdzałeś aliasy w kroku 4 — uruchom pipeline drugi raz** (ta sama komenda z kroku 2). Teraz nowo zatwierdzone markery zostaną poprawnie rozpoznane, nie wpadną do „nieznanych".
-
-**6. Opcjonalnie — świeży raport na wizytę:**
-```bash
-PYTHONPATH=src uv run python src/report.py
+Wrzuciłem nowy plik do data/raw/structural/: <nazwa>. Uruchom pipeline, obsłuż
+nieznane markery jeśli się pojawią (zapytaj mnie o zatwierdzenie każdego),
+wygeneruj raport z nowej migawki-kandydata i zaczekaj na moją weryfikację —
+nie scalaj z zaufanym magazynem.
 ```
-Zapisuje `data/reports/<data>-trendy.md` ze wszystkimi trendami do tej pory.
 
-**7. Opcjonalnie — odśwież tabelę w BigQuery.** `structural.ndjson` jest nadpisywany od zera przy każdym uruchomieniu (nie doklejany) — więc load do BigQuery też musi być **replace całej tabeli, nigdy append** (inaczej duplikaty starych rekordów przy każdym cyklu). Pełna instrukcja (DROP TABLE + Create table → Upload, schemat do wklejenia): `docs/stages/03-storage-analysis.md`, sekcja „Instrukcja: ręczny load".
+Dostaniesz ścieżki: migawka `data/store/<data>-structural.ndjson`, raport `data/reports/<data>-trendy.md`. Sprawdź kolumnę **„Źródło"** przy nowych wynikach względem oryginału.
 
-### Przykład
+**2. Dane poprawne — wklej (uzupełnij datę z kroku 1):**
+```
+Zweryfikowałem data/store/<data>-structural.ndjson (raport
+data/reports/<data>-trendy.md) — dane poprawne. Scal z zaufanym magazynem
+data/store/structural-backfill.ndjson.
+```
 
-Wracasz z laboratorium z 3 nowymi wynikami (morfologia, lipidogram, TSH). Kopiujesz 3 pliki do `data/raw/structural/`, odpalasz komendę z kroku 2.
+Dopiero teraz dane liczą się „na serio" — BigQuery i dalsza analiza czytają wyłącznie zaufany magazyn. Procedura odświeżenia tabeli (zawsze replace, nigdy append): `docs/stages/03-storage-analysis.md`.
 
-- **Wariant A (typowy po ustabilizowaniu słownika):** `Brak nieznanych markerów — wszystkie zmapowane.` Gotowe — `data/store/structural.ndjson` ma już nowe rekordy, można pytać o trend w Claude Code.
-- **Wariant B (nowe laboratorium albo marker, którego dotąd nie było):** `Warstwa 3: 2 nieznanych nazw -> Haiku proponuje aliasy...`. Otwierasz `pending/aliases.yml`, widzisz np. `Witamina D: VITAMIN_D`. Sprawdzasz, że kod ma sens, przenosisz wpis do `config/aliases.yml` pod właściwym panelem, usuwasz z `pending/`, uruchamiasz pipeline jeszcze raz — teraz Witamina D wchodzi do wyników poprawnie, a przy kolejnym wyniku z tym markerem krok 4 już się nie pojawi.
+**Przykład:** wracasz z laboratorium z nowym wynikiem TSH, kopiujesz plik do `data/raw/structural/`, wklejasz prompt 1. Marker już w słowniku → od razu dostajesz migawkę i raport do sprawdzenia. Nowy marker/lab → Claude Code najpierw zapyta o zatwierdzenie proponowanego aliasu, dopiero potem wygeneruje raport. Po sprawdzeniu kolumny „Źródło" wklejasz prompt 2.
+
+Dokument z nieczytelnym OCR (za mało wyciągniętego tekstu) nie wejdzie do wyników w ogóle — Claude Code to zgłosi w podsumowaniu; sprawdź skan ręcznie (kąt, ostrość, czy to na pewno badanie krwi/moczu).

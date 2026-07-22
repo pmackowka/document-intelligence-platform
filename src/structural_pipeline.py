@@ -125,6 +125,9 @@ def _range_from_cell(cell: str | None) -> tuple[float | None, float | None]:
     m = _RANGE_CELL.match(c)
     if m:
         return to_num(m.group(1)), to_num(m.group(2))
+    m = _RANGE.match(c)               # zakres rozdzielony samą spacją, bez myślnika ("1,005 1,030") —
+    if m:                               # ten sam kształt co _RANGE w formacie sekcyjnym, tu brakował
+        return float(m.group(1).replace(",", ".")), float(m.group(2).replace(",", "."))
     m = _BOUND_CELL.match(c)
     if m:
         op, num = m.groups()
@@ -345,6 +348,11 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
                 continue
             value = to_num(cells[1])
             value_text = None if value is not None else (cells[1] or None)
+            if value is not None and cells[1].strip().startswith(("<", ">")):
+                # to_num() świadomie usuwa "<"/">" przy parsowaniu liczby (np. "<1" -> 1.0) —
+                # bez tego wynik poniżej progu wykrywalności wyglądałby jak dokładny pomiar.
+                # Zachowaj oryginalny zapis do wyświetlenia (fmt_value w report.py go preferuje).
+                value_text = cells[1].strip()
             if value is None and value_text is None:
                 # kolumna "wynik" pusta — u niektórych labów realny wynik przesuwa się do sąsiedniej
                 # komórki (obserwowane: wiersze oflagowane jako poza normą, etap 4 backfill). Nie

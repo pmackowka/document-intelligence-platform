@@ -191,3 +191,18 @@ Po naprawie znaleziono też dwa DODATKOWE, jeszcze nienaprawione problemy (poza 
 **Jak działa (metoda, nie tylko wynik):** oba błędy znaleziono metodą „napisz szybki automatyczny test, potem NIE UFAJ mu ślepo — sprawdź każdy wynik ręcznie w źródle, zanim uznasz go za prawdziwy problem albo za czysty wynik”. Test dał 25 kandydatów z 92% fałszywych alarmów — gdyby przyjąć go bezkrytycznie, powstałaby fałszywa lista 25 „błędów” zamiast prawdziwej listy 2.
 
 **Pułapki:** żaden z tych dwóch błędów nie został znaleziony wcześniejszymi automatycznymi checkami (S1: „0 nieznanych markerów”, grep po „None”) — oba dotyczyły poprawnie rozpoznanego markera z cichym, częściowym uszkodzeniem pola. To ta sama lekcja co przy poprzednich audytach: automatyczne checki na poziomie „czy rekord istnieje” nie łapią błędów na poziomie „czy pole w rekordzie jest poprawne”.
+
+### Rewizja 3 wykluczonych dokumentów po naprawie przypisu — wykluczenie potwierdzone, nie cofnięte
+
+**Decyzja:** po naprawie błędu „przypis czytany jako wynik" (patrz notatka wyżej) sprawdzono ponownie, czy 3 dokumenty wykluczone wcześniej jako „pomieszany OCR" (`_excluded-scrambled-ocr/`) da się teraz odzyskać — jeden z nich (`2026.04.02 - Badanie lekarskie 1`) ma dokładnie ten sam wzorzec przypisów (¹²³⁴⁶ przy nazwach markerów), więc było podejrzenie, że to ta sama, już naprawiona przyczyna. **Wynik: nie.** Parser (z poprawką) uruchomiony ponownie na plikach OCR tych 3 dokumentów wciąż zwraca dane klinicznie nieprawdopodobne — wykluczenie pozostaje w mocy, bez zmian w `data/raw/structural/`.
+
+**Dlaczego (konkretne dowody, nie samo „wygląda podejrzanie"):** wzorzec to systematyczne przesunięcie wartości/zakresu między SĄSIEDNIMI markerami, nie pojedynczy błąd:
+- ALP (fosfataza zasadowa) dostała wynik `2,33 mmol/l` z zakresem `2,15–2,50` — ALP nigdy nie jest podawana w mmol/l (zawsze U/l), a ten zakres to dokładnie zakres wapnia całkowitego.
+- Ca (wapń) dostał zakres `0,81–1,45` — to nie zakres wapnia (prawidłowo ~2,15–2,55), tylko dokładnie zakres fosforanów (potwierdzony wcześniej tej samej sesji w innym dokumencie tego labu).
+- Na (sód, drugi dokument) dostał zakres `3,5–136` — dolna granica 3,5 to zakres potasu, nie sodu.
+- Kwas moczowy dostał zakres `7,0–145,0` — klinicznie nierealny rozstrzał dla tego markera.
+- Nazwisko lekarza („Mlngr DAMIAN CHARYTON") wciąż jest wartością Witaminy D — ten sam wyciek PII co przy pierwszym wykluczeniu, niezwiązany z przypisami, więc nienaruszony dzisiejszą poprawką.
+
+**Jak działa (metoda):** nie wystarczyło sprawdzić „czy parser już nie zgłasza błędu" — trzeba było ocenić KLINICZNĄ wiarygodność wyniku (jednostka pasująca do markera, zakres w sensownym rzędzie wielkości). To ta sama metoda, która wcześniej złapała problem z ALP (operator: „wątpię, aby zakres referencyjny uległ takiej zmianie w miesiąc") — sprawdzanie wiarygodności, nie tylko obecności rekordu.
+
+**Pułapki:** ten sam objaw w logu (przypis przy nazwie markera) miał dwie różne przyczyny nałożone na siebie w tym samym dokumencie — jedną naprawioną dziś (przypis jako wartość), jedną wciąż nieznaną (przesunięcie danych między markerami + wyciek PII). Nie zakładaj, że naprawienie jednej znalezionej przyczyny naprawia cały objaw — zweryfikuj wynik end-to-end, nie tylko brak błędu w logu.

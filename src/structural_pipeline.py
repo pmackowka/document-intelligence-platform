@@ -166,8 +166,14 @@ _NOISE = re.compile(
     r"^(data|badanie wykonano|dot\. materia|kod |oddzial|adres|pesel|plec|"
     r"wynik|jedn|min|max|flaga|pacjent|badanie|lek\.kier|odbiorca|dok\.|"
     r"nr ksiegi|materia|metoda|vetoda|procedura|uwaga|autoryzowa|nazwa badania|"
-    r"wykonano|biochemia|hematologia|koagulologia|surowica|komentarz|morfologia)", re.I
+    r"wykonano|biochemia|hematologia|koagulologia|surowica|komentarz|morfologia|"
+    r"<!--|"                                    # placeholder Docling dla obrazu/grafiki, nigdy wynik
+    r"bilirubina wolna \(posrednia\))", re.I     # nagłówek GRUPY (3 markery-dzieci pod spodem), nie wynik
 )
+
+# Podzbiór _NOISE: etykiety, po których w źródle następuje CZYJEŚ nazwisko (nie wynik badania).
+# Używane w parse_section_chunk do wygaszenia linii BEZPOŚREDNIO PO takiej etykiecie.
+_PERSON_LABEL = re.compile(r"^(pacjent|lek\.kier|odbiorca|autoryzowa)", re.I)
 
 
 def resolve(panel, key):
@@ -221,9 +227,23 @@ def parse_section_chunk(chunk: list[str], inline_val: str | None):
         value = _num(inline_val)
         value_text = None if value is not None else inline_val
 
+    after_person_label = False
     for raw in chunk:
         s = html.unescape(raw.strip()).lstrip("#").strip()
-        if not s or is_noise(raw):
+        if not s:
+            continue
+        if is_noise(raw):
+            # zapamiętaj: linia BYŁA etykietą osoby (Pacjent:/Lekarz/Odbiorca/Autoryzował) ->
+            # następna niepusta linia to najpewniej nazwisko, nie wynik (patrz niżej).
+            after_person_label = bool(_PERSON_LABEL.match(norm(s)))
+            continue
+        if after_person_label:
+            # wartość bezpośrednio po etykiecie osobowej — imię/nazwisko (bywa formatowane
+            # jako nagłówek markdown, ".lstrip('#')" wyżej to ukrywa) — nigdy wynik badania.
+            # Realny przypadek: kreatynina dostała wartość "MAĆKÓWKA PIOTR" z powtórzonego
+            # nagłówka pacjenta na 2. stronie PDF. Nie filtrujemy WSZYSTKICH nagłówków w
+            # chunku ogólnie — "## nie wykryto" bywa prawdziwym wynikiem jakościowym.
+            after_person_label = False
             continue
         if unit is None and norm(s) in UNITS:            # jednostka
             unit = UNITS[norm(s)]

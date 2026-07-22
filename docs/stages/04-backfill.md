@@ -206,3 +206,19 @@ Po naprawie znaleziono też dwa DODATKOWE, jeszcze nienaprawione problemy (poza 
 **Jak działa (metoda):** nie wystarczyło sprawdzić „czy parser już nie zgłasza błędu" — trzeba było ocenić KLINICZNĄ wiarygodność wyniku (jednostka pasująca do markera, zakres w sensownym rzędzie wielkości). To ta sama metoda, która wcześniej złapała problem z ALP (operator: „wątpię, aby zakres referencyjny uległ takiej zmianie w miesiąc") — sprawdzanie wiarygodności, nie tylko obecności rekordu.
 
 **Pułapki:** ten sam objaw w logu (przypis przy nazwie markera) miał dwie różne przyczyny nałożone na siebie w tym samym dokumencie — jedną naprawioną dziś (przypis jako wartość), jedną wciąż nieznaną (przesunięcie danych między markerami + wyciek PII). Nie zakładaj, że naprawienie jednej znalezionej przyczyny naprawia cały objaw — zweryfikuj wynik end-to-end, nie tylko brak błędu w logu.
+
+### Weryfikacja względem oryginalnych PDF-ów — operator świadomie cofnął decyzję o zakresie
+
+**Decyzja:** operator, po zobaczeniu rankingu priorytetów, świadomie cofnął wcześniejszą decyzję o nieczytaniu surowych PDF-ów (ryzyko PII) i poprosił o realne porównanie próbki dokumentów z oryginałem. Sprawdzono 7 dokumentów (129 rekordów, ~56% zaufanego magazynu) różnych formatów/labów.
+
+**Znaleziono trzy różne błędy, każdy w innej warstwie:**
+
+1. **Błąd samego OCR-a (nienaprawialny kodem):** `Badanie_lekarskie_436632603`, MCV — Docling odczytał „90,9" jako „20,9" (cicha, zła liczba w zaufanym magazynie, klinicznie niemożliwa wartość). Naprawiono ręcznie w **cache'owanym pliku OCR** (`data/interim/structural-ocr/*.md`), nie w samym NDJSON — magazyn regeneruje się z tego cache przy każdym uruchomieniu (OCR pomija już przetworzone pliki), więc poprawka w NDJSON zniknęłaby przy najbliższym scaleniu nowego kandydata. To pierwszy precedens tego typu w projekcie — poprawka oparta na wizualnym potwierdzeniu operatora względem oryginału, nie zgadywanie.
+
+2. **Błąd Pythona — `to_num()` usuwał `<`/`>` z wyniku:** wynik poniżej progu wykrywalności („<1") zamieniał się w dokładną liczbę („1.0"), gubiąc klinicznie ważną różnicę. Ścieżka SEKCYJNA miała już ochronę przed tym (`s.startswith((">", "<"))` zachowywało `value_text`), ścieżka TABELI — nie. Naprawa: to samo zachowanie w obu ścieżkach + `fmt_value()` w `report.py` teraz preferuje `value_text` do wyświetlenia, gdy niesie operator porównania (`value` samo w sobie zostaje liczbą, do użytku w kolumnie Flaga/sortowaniu).
+
+3. **Błąd Pythona — `_range_from_cell()` nie rozpoznawał zakresu rozdzielonego spacją, bez myślnika:** „1,005 1,030" (bez myślnika, w przeciwieństwie do już obsługiwanego „2,15 - 2,50") gubiło cały zakres. Naprawa: dodano `_RANGE` (już istniejący wzorzec z formatu sekcyjnego) jako dodatkowe dopasowanie w `_range_from_cell()`.
+
+**Jak działa (dlaczego dwa różne rodzaje naprawy):** błąd 1 nie da się naprawić w kodzie — Python dostał złą cyfrę, zanim w ogóle zobaczył tekst; jedyna trwała naprawa to poprawka w warstwie cache'owanego OCR-a. Błędy 2 i 3 to prawdziwe luki logiki — naprawione raz, działają automatycznie na każdym przyszłym dokumencie z tym samym kształtem danych (potwierdzone: naprawa 2 i 3 przy okazji naprawiła też rekordy z innych dokumentów w próbce, których nie sprawdzano ręcznie — `stool_ph` odzyskał zakres, drugi dokument z Urobilinogenem też się poprawił).
+
+**Pułapki:** rozróżnienie „błąd OCR" od „błąd Pythona" wymaga sprawdzenia surowego pliku OCR (`grep` po konkretnej wartości) — sama zgodność raportu z PDF-em nie mówi, na którym poziomie problem powstał. Manualna poprawka cache'owanego OCR-a to wyjątek od reguły „nie patchuj danych ręcznie" — uzasadniony tylko wtedy, gdy przyczyna jest jednoznacznie w warstwie OCR (nie w logice parsera) i operator wizualnie potwierdził prawidłową wartość względem oryginału.

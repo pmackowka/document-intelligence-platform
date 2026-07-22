@@ -54,11 +54,16 @@ def load_labels() -> dict:
 
 
 def fmt_value(r: dict, group_unit: str | None = None) -> str:
+    text = r["value_text"]
+    if text and str(text).strip().startswith(("<", ">")):
+        # Wynik poniżej/powyżej progu wykrywalności ("<1") — value niesie liczbę do porównań
+        # (np. kolumna Flaga), ale wyświetlić trzeba oryginalny zapis z operatorem, nie samą liczbę.
+        return str(text)
     if r["value"] is not None:
         unit = r["unit"] or group_unit  # rekord bez własnej jednostki -> jednostka reszty serii
         return f"{r['value']:g} {unit}" if unit else f"{r['value']:g}"
-    if r["value_text"] is not None:
-        return str(r["value_text"])
+    if text is not None:
+        return str(text)
     return "—"
 
 

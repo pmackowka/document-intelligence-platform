@@ -139,6 +139,38 @@ panels:
       "wapni w dzm": "urine_calcium_24h"
       "ggtp": "GGT"
       "crp": "CRP"
+      # karta szpitalna (2026-07) — nowe markery + rozdzielenie DZM (dobowa zbiórka moczu,
+      # wydalanie w mmol/24h) od stężenia w pojedynczej próbce/krwi (inna skala pomiaru —
+      # ten sam błąd, którego dziś unikaliśmy: nie łączyć w jeden kod/trend)
+      "fosforany w surowicy": "PHOS"
+      "kwas moczowy w moczu (pojedyncza porcja)": "urine_uric_acid"
+      "sod w moczu (pojedyncza porcja)": "urine_sodium"
+      "potas w moczu (pojedyncza porcja)": "urine_potassium"
+      "mocznik w moczu (pojedyncza porcja)": "urine_urea"
+      "wapn w dzm": "urine_calcium_24h"
+      "magnez w dzm": "urine_magnesium_24h"
+      "mocznik w dzm": "urine_urea_24h"
+      "potas w dzm": "urine_potassium_24h"
+      "kwas moczowy w dzm": "urine_uric_acid_24h"
+      "chlorki w dzm": "urine_chloride_24h"
+      "fosforany w dzm": "urine_phosphate_24h"
+      "kreatynina w dzm": "urine_creatinine_24h"
+      "sod w dzm": "urine_sodium_24h"
+      "albumina w dzm": "urine_albumin_24h"
+      "1-84 pth": "PTH_1_84"
+      "pth (parat hormon)": "PTH"
+      "albumina": "ALB"
+      "amylaza w surowicy": "AMYLASE"
+      "chlorki w moczu (pojedyncza porcja)": "urine_chloride"
+      "ferrytyna": "FERR"
+      "czynnik wzrostu fibroblast ow fgf-23": "FGF23"
+      "igf1-somatomedyna c": "IGF1"
+      "kreatynina w moczu (pojedyncza porcja)": "urine_creatinine"
+      "lh (hormon lut einizujacy)": "LH"
+      "lipaza": "LIPASE"
+      "prolaktyna": "PRL"
+      "testosteron": "TESTO"
+      "shbg": "SHBG"
 
   lipidy:
     format: section

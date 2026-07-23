@@ -84,6 +84,26 @@ _ICD9 = re.compile(r"ICD-9:\s*([A-Z]\d+)")            # ścisły: kod panelu w k
 _ICD9_LOOSE = re.compile(r"\(ICD-9:\s*([^)]*)\)")     # luźny: dowolny kod inline (też "-", "055")
 _BRACKET_CODE = re.compile(r"^\[[A-Z0-9]+\]\s*\S")    # inny lab, wewnętrzny kod jako PREFIKS: "[L23] Fosforany"
 _RANGE = re.compile(r"^(\d+(?:[.,]\d+)?)\s+(\d+(?:[.,]\d+)?)(?:\s+[HLNhln*])?$")  # "115,00 190,00 H"
+# Etap 4 (karta szpitalna): trzeci format tabeli, inny niż "nazwa|wynik|jedn|MIN|MAX" i format
+# sekcyjny — jedna minitabela NA MARKER, nagłówek "## Nazwa" + tabela "Lp. | Data | <wartość>".
+# Jednostka/zakres bywają doklejone do komórki nagłówka wartości ("ALP ... [U/l] (30-120)").
+_LP_UNIT = re.compile(r"[\[I]([a-zA-Z%/².,0-9µ]+)\]")  # OCR bywa czyta "[" jako "I": "Inmol/l]" = "[nmol/l]"
+_LP_RANGE = re.compile(r"\(\s*(-?\d+(?:[.,]\d+)?)\s*-\s*(-?\d+(?:[.,]\d+)?)\s*\)")
+_LP_DATE = re.compile(r"(\d{4}-\d{2}-\d{2})")
+
+
+def _parse_lp_header_cell(cell: str) -> tuple[str | None, float | None, float | None]:
+    """Wyciąga jednostkę i zakres z komórki nagłówka minitabeli karty szpitalnej, jeśli są
+    tam doklejone ("ALP/Fosfataza alkaliczna/ [U/l] (30-120)") — inaczej (None, None, None)."""
+    unit = None
+    m = _LP_UNIT.search(cell)
+    if m:
+        unit = canon_unit(m.group(1))
+    lo = hi = None
+    m = _LP_RANGE.search(cell)
+    if m:
+        lo, hi = to_num(m.group(1)), to_num(m.group(2))
+    return unit, lo, hi
 # Etap 4 (backfill): pierwotnie tylko jeden format jednego labu ("Data wykonania: DD.MM.YYYY").
 # Inne laby piszą tę samą informację innym słowem/formatem — 27% rekordów zostawało bez daty,
 # mimo że data była wprost w tekście. Kolejność ma znaczenie: pierwsze trafienie wygrywa, więc
@@ -319,11 +339,18 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
     lines = text.splitlines()
     panel = None
     section_active = False
+    last_heading = None    # ostatni nagłówek Markdown ("## Nazwa") — do minitabel karty szpitalnej
+    lp_pending = None      # (panel, kod, nazwa, jedn, lo, hi) po rozpoznaniu nagłówka "Lp. | Data | ..."
     records, unknown, bad_rows = [], [], []
     anchors: list[tuple[int, str, str, str, str | None]] = []  # (idx, panel, kanon, nazwa_raw, inline_val)
 
     for i, line in enumerate(lines):
         stripped = line.strip()
+
+        # Śledzenie nagłówków Markdown — efekt uboczny, linia i tak leci dalej przez istniejące
+        # gałęzie (może być np. nagłówkiem panelu z ICD-9) — nie przechwytujemy jej tutaj.
+        if stripped.startswith("#") and stripped.lstrip("#").strip():
+            last_heading = stripped.lstrip("#").strip()
 
         # --- wiersz tabeli: parsowanie pozycyjne ---
         if stripped.startswith("|"):
@@ -334,6 +361,42 @@ def parse_document(text: str, source: str) -> tuple[list[dict], list[tuple[str, 
                 if mm and mm.group(1) in TABLE_PANEL_BY_ICD:
                     panel = TABLE_PANEL_BY_ICD[mm.group(1)]
             if len(cells) < 2 or is_separator(cells):
+                continue
+
+            # --- nagłówek "Lp. | Data | <marker>": minitabela NA MARKER (karta szpitalna) —
+            # sprawdzane PRZED ogólną ścieżką tabeli, żeby "Lp." nie trafiało jako nazwa markera
+            # (patrz notatka etapu 4: "trzeci format tabeli, jedna minitabela na marker").
+            if norm(cells[0]) in ("lp", "lp."):
+                name_for_lookup = last_heading or (cells[2] if len(cells) > 2 else "")
+                key = norm(name_for_lookup)
+                hit = resolve_section(key) if key else None
+                if hit:
+                    lp_panel, lp_canon = hit
+                    header_cell = cells[2] if len(cells) > 2 else ""
+                    lp_unit, lp_lo, lp_hi = _parse_lp_header_cell(header_cell)
+                    lp_pending = (lp_panel, lp_canon, name_for_lookup, lp_unit, lp_lo, lp_hi)
+                else:
+                    lp_pending = None
+                    if name_for_lookup and not is_noise(name_for_lookup):
+                        unknown.append((panel or "?", name_for_lookup))
+                continue
+            if lp_pending is not None:
+                # wiersz danych do wcześniej zapowiedzianego markera z nagłówka "Lp. | Data | ..."
+                lp_panel, lp_canon, lp_name, lp_unit, lp_lo, lp_hi = lp_pending
+                lp_pending = None
+                value_cell = cells[2] if len(cells) > 2 else None
+                row_date = date
+                if len(cells) > 1:
+                    dm = _LP_DATE.search(cells[1])
+                    if dm:
+                        row_date = dm.group(1)
+                if value_cell:
+                    v = to_num(value_cell)
+                    v_text = None if v is not None else (value_cell.strip() or None)
+                    if v is not None or v_text is not None:
+                        records.append(_record(lp_panel, lp_canon, lp_name, v, v_text, lp_unit, lp_lo, lp_hi, row_date, source))
+                        continue
+                bad_rows.append((source, lp_name))
                 continue
             name_raw = cells[0]
             key = norm(name_raw)

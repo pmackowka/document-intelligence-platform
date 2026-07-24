@@ -3,78 +3,62 @@
 ## Cel
 Warstwa, dla której to wszystko powstało: magazyn z osią czasu (`data/store/structural-backfill.ndjson`, wyjście etapu 2) i odpytywanie trendów przez Claude Code w terminalu (S2), plus zgodność ze schematem BigQuery bez transformacji (S4).
 
-Sedno: to nie jest budowa silnika zapytań. PRD świadomie nie przewiduje dedykowanego narzędzia do trendów — Scope pkt 6 mówi wprost: konsumpcja to „Claude Code w terminalu czyta pliki; analiza trendów/porównań markerów przez prompt". Rola tego etapu to dowieść, że płaski, jednorodny schemat NDJSON (`marker`, `value`, `unit`, `exam_date`, `reference_low/high`) wystarcza, żeby odpowiedzieć na pytanie o trend bez pośredniego kodu zapytań — a tam, gdzie kod jest realnie potrzebny (raport na wizytę, walidacja pod BigQuery), zbudować dokładnie tyle, ile trzeba, nie więcej.
-
-Trzy równoległe strumienie pracy: (1) walidacja, że magazyn z etapu 2 jest spójny na tyle, by bezbłędnie załadować się do BigQuery (typy i klucze pól, nie tylko poprawność JSON per linia); (2) dowód, że trend/porównanie działają „przez prompt", bez dedykowanego skryptu; (3) `src/report.py` — jedyny realny artefakt kodu tego etapu, bo User Story 4 z PRD chce gotowego pliku Markdown „na wizytę", nie tylko odpowiedzi w czacie.
+To nie budowa silnika zapytań. PRD świadomie nie przewiduje dedykowanego narzędzia do trendów — konsumpcja to „Claude Code w terminalu czyta pliki; analiza przez prompt". Rola etapu: dowieść, że płaski, jednorodny schemat NDJSON wystarcza, żeby odpowiedzieć na pytanie o trend bez pośredniego kodu — a tam, gdzie kod jest realnie potrzebny (raport na wizytę, walidacja pod BigQuery), zbudować dokładnie tyle, ile trzeba. Jedyny realny artefakt kodu tego etapu to `src/report.py` (User Story 4 chce gotowego pliku Markdown „na wizytę").
 
 ## Zakres / Definition of Done
-- [x] Kanoniczny NDJSON: płaskie rekordy, schemat pipeline'u strukturalnego zwalidowany — 114/114 rekordów to poprawny JSON z identycznym zestawem kluczy i spójnymi typami per pole (`value`/`reference_low`/`reference_high`: float|None; `unit`/`value_text`/`reference_note`: str|None; reszta: str) — gotowe pod BigQuery bez transformacji. Rozszerzony do 12 kluczy (`reference_note`) po realnym loadzie — patrz Notatki
-- [x] Trend dowolnego markera jednym promptem w Claude Code — zademonstrowane bezpośrednio z NDJSON (hemoglobina: 2020-12-21 → 2023-01-23, 14.1 → 14.9 g/dl). Formalny próg S2 (marker z ≥3 pomiarami) niezweryfikowany na obecnym wolumenie (14 dok., 3 unikalne daty) — pomiar właściwy dla etapu 4 na realnym backfillu
-- [x] Porównanie dwóch markerów na osi czasu — zademonstrowane (hemoglobina vs OB, lokalny analogon Fe vs CRP z PRD: marker niedokrwistości vs marker stanu zapalnego)
-- [x] Ręczny load NDJSON do BigQuery bez błędów schematu (test S4) — operator wykonał realny load przez konsolę GCP (schemat 11 kolumn), przeszedł bez błędów. Schemat od tego czasu rozszerzony do 12 kolumn (`reference_note`) — tabela do przeładowania, instrukcja niżej
-- [x] Raport Markdown „do lekarza": trendy markerów — `src/report.py`, realny raport z 114 rekordów: 10 paneli, 72 serie marker/jednostka, strzałki kierunku zmiany; `reference_note` wyświetlana zamiast „—" gdy brak czystego zakresu
+- [x] Kanoniczny NDJSON zwalidowany pod BigQuery — 114/114 rekordów to poprawny JSON z identycznym zestawem kluczy i spójnymi typami per pole (`value`/`reference_low`/`reference_high`: float|None; `unit`/`value_text`/`reference_note`: str|None; reszta: str). Rozszerzony do 12 kluczy (`reference_note`) po realnym loadzie — patrz Notatki
+- [x] Trend dowolnego markera jednym promptem — zademonstrowane z NDJSON (hemoglobina: 2020→2023, 14.1→14.9 g/dl). Formalny próg S2 (≥3 pomiary) niezweryfikowany na tym wolumenie (14 dok., 3 daty) — pomiar właściwy dla etapu 4
+- [x] Porównanie dwóch markerów na osi czasu — zademonstrowane (hemoglobina vs OB)
+- [x] Ręczny load NDJSON do BigQuery bez błędów schematu (S4) — operator wykonał realny load przez konsolę GCP (11 kolumn), bez błędów. Schemat rozszerzony do 12 kolumn (`reference_note`) — instrukcja niżej
+- [x] Raport Markdown „do lekarza": trendy markerów — `src/report.py`, realny raport z 114 rekordów: 10 paneli, 72 serie, strzałki kierunku; `reference_note` zamiast „—" gdy brak czystego zakresu
 
 ## Notatki
-<!-- Grupuj po temacie, nie po dacie (chronologię trzyma git). Każdy podpunkt
-     w OSOBNYM akapicie (pusta linia między nimi). Dla każdego tematu:
-
-### <Temat / czego dotyczy>
-
-**Decyzja:** co ustalono.
-
-**Dlaczego:** uzasadnienie, trade-offy.
-
-**Jak działa:** mechanizm narzędzia pod spodem — sedno nauki.
-
-**Pułapki:** co zaskoczyło, na co uważać.
-
-Nie każdy temat wymaga wszystkich czterech podpunktów. To notatki do nauki, nie log czynności. -->
 
 ### Jeden marker, dwie jednostki — pułapka grupowania po samym kodzie
 
-**Decyzja:** trendy i raport grupują po parze `(marker, unit)`, nie po samym `marker`. `src/report.py::build_report` klucz grupujący to `(r["marker"], r["unit"])`.
+**Decyzja:** trendy i raport grupują po parze `(marker, unit)`, nie po samym `marker`. Klucz w `report.py::build_report` to `(r["marker"], r["unit"])`.
 
-**Dlaczego:** różnicowanie morfologii (NEU/LYM/MONO/EOS/BASO) w realnym źródle występuje w DWÓCH jednostkach pod tym samym kodem kanonicznym — raz jako odsetek (`%`), raz jako wartość bezwzględna (`tys/µl`). Pierwszy, naiwny check policzył to jako „4 pomiary NEU" (sugerując, że próg S2 ≥3 jest już spełniony) — błędnie, bo to dwie różne serie po 2 punkty, nie jedna po 4. Naiwne grupowanie po samym `marker` zlałoby odsetek i wartość bezwzględną w jeden „trend", co dałoby liczbowo bezsensowny wynik (np. „51.6 → 3.13 → 54.7" jako jeden ciąg).
+**Dlaczego:** różnicowanie morfologii (NEU/LYM/MONO/EOS/BASO) występuje w DWÓCH jednostkach pod tym samym kodem — raz jako odsetek (`%`), raz jako wartość bezwzględna (`tys/µl`). Naiwne grupowanie po samym `marker` zlałoby to w jeden „trend" (liczbowo bezsensowny ciąg „51.6 → 3.13 → 54.7"). Naiwny check policzył też „4 pomiary NEU" (niby próg S2 spełniony) — błędnie, bo to dwie serie po 2 punkty.
 
-**Jak działa:** `structural_pipeline.py` zapisuje `unit` jako osobne pole per rekord (z `units.yml` albo wprost z dokumentu) — schemat już to rozróżnia, trzeba tylko go użyć w grupowaniu, nie zakładać „jeden kod = jedna seria".
+**Jak działa:** `structural_pipeline.py` zapisuje `unit` jako osobne pole per rekord — schemat już to rozróżnia, trzeba tylko użyć w grupowaniu.
 
-**Pułapki:** to pierwszy realny przypadek w projekcie, gdzie zliczanie „surowych rekordów" dało inny (i mylący) wynik niż zliczanie „rzeczywistych serii pomiarowych". Każde pytanie w stylu „ile pomiarów ma X" wymaga doprecyzowania, czy liczymy rekordy, czy serie — różnica bywa 2x.
+**Pułapki:** pierwszy przypadek w projekcie, gdzie zliczanie „rekordów" dało inny wynik niż zliczanie „serii pomiarowych". Każde „ile pomiarów ma X" wymaga doprecyzowania — różnica bywa 2×.
 
-### Próg S2 (≥3 pomiary) — zbudowany mechanizm, niezmierzony próg
+### Próg S2 (≥3 pomiary) — mechanizm zbudowany, próg niezmierzony
 
-**Decyzja:** trend/porównanie działają i są zademonstrowane na realnych danych (2-punktowe serie), ale formalne domknięcie progu S2 („marker z ≥3 pomiarami") przesunięte do etapu 4.
+**Decyzja:** trend/porównanie działają na realnych 2-punktowych seriach, ale formalne domknięcie S2 przesunięte do etapu 4.
 
-**Dlaczego:** obecny wolumen (14 dok., 3 unikalne daty badań) nie ma ani jednej serii marker+jednostka z 3 różnymi datami — maksimum to 2. To nie wada mechanizmu (zapytanie o trend działa identycznie dla 2 i dla N punktów), tylko naturalny skutek małego wolumenu przed backfillem. Etap 4 i tak ma własny punkt DoD „Pomiar i zapis wyników S1–S4" — właściwe miejsce na formalny test tego konkretnego progu na realnych ~115–120 dokumentach.
+**Dlaczego:** wolumen (14 dok., 3 daty) nie ma ani jednej serii marker+jednostka z 3 różnymi datami. To nie wada mechanizmu (zapytanie działa identycznie dla 2 i N punktów), tylko skutek małego wolumenu przed backfillem. Etap 4 ma własny punkt „Pomiar S1–S4" na realnych ~115–120 dok.
 
-**Pułapki:** łatwo pomylić „mechanizm zbudowany i działa" z „kryterium sukcesu spełnione" — to dwa różne twierdzenia. Pierwsze można udowodnić teraz (kodem, na małej próbce), drugie wymaga realnego wolumenu danych, którego jeszcze nie ma.
+**Pułapki:** łatwo pomylić „mechanizm działa" z „kryterium spełnione" — pierwsze udowadnia się teraz kodem, drugie wymaga realnego wolumenu.
 
 ### Walidacja schematu pod BigQuery — co konkretnie sprawdzić
 
-**Decyzja:** „gotowość pod BigQuery" sprawdzona jako: (1) każda linia to poprawny JSON, (2) każdy rekord ma dokładnie ten sam zestaw kluczy, (3) każde pole ma spójny typ Python (właściwy typ + ewentualnie `None`, nigdy więcej niż te dwa).
+**Decyzja:** „gotowość pod BigQuery" = (1) każda linia to poprawny JSON, (2) każdy rekord ma ten sam zestaw kluczy, (3) każde pole ma spójny typ (właściwy typ + ewentualnie `None`, nigdy więcej).
 
-**Dlaczego:** to dokładnie te trzy warunki, których złamanie wywala `bq load` na realnym pliku — niespójna liczba kolumn albo pole raz-liczba-raz-tekst to najczęstsze przyczyny błędu schematu przy NEWLINE_DELIMITED_JSON. Sama „poprawność JSON" (częsty, za wąski test) tego nie łapie.
+**Dlaczego:** to dokładnie te trzy warunki, których złamanie wywala `bq load` — niespójna liczba kolumn albo pole raz-liczba-raz-tekst to najczęstsze przyczyny błędu schematu przy NEWLINE_DELIMITED_JSON. Sama „poprawność JSON" (za wąski test) tego nie łapie.
 
-**Jak działa:** dla każdego pola zbiera się zbiór typów Pythona występujących we wszystkich 114 rekordach (`{type(v).__name__ for v in ...}`) — wynik musi mieć rozmiar ≤2 (typ + `NoneType`). Znaleziono: `value`/`reference_low`/`reference_high` → `float|None`, `unit`/`value_text` → `str|None`, reszta zawsze `str`. Dokładnie to, czego BigQuery oczekuje po polu `NULLABLE`.
+**Jak działa:** dla każdego pola zbiera się zbiór typów Pythona ze wszystkich rekordów (`{type(v).__name__ for v in ...}`) — wynik musi mieć rozmiar ≤2 (typ + `NoneType`). Dokładnie to, czego BigQuery oczekuje po polu `NULLABLE`.
 
-**Pułapki:** sam load NDJSON do BigQuery jest świadomie ręczny (PRD: „Automatyczny load do BigQuery" poza zakresem V1) — wymaga projektu/kont GCP, których nie mam. Ten etap dostarcza walidację i pewność, że load się powinien udać, nie wykonuje go za operatora. Automatyzacja (np. `bq load` z terminala) to kandydat na przyszłość — zmiana zakresu, wymaga aktualizacji PRD, nie robimy tego po cichu.
+**Pułapki:** load jest świadomie ręczny (PRD: „Automatyczny load do BigQuery" poza V1). Ten etap dostarcza walidację i pewność, że load się uda, nie wykonuje go za operatora.
 
-### Instrukcja: ręczny load `structural-backfill.ndjson` do BigQuery (konsola GCP) — procedura CYKLICZNA
+### Instrukcja: ręczny load do BigQuery (konsola GCP) — procedura CYKLICZNA
 
-**Decyzja:** load przez UI konsoli GCP (Create table → Upload), nie `bq` CLI — operator woli klikać, ma pełną kontrolę nad każdym krokiem i widzi błędy bezpośrednio w przeglądarce. Za każdym razem, gdy chcesz odświeżyć dane w BigQuery (nie tylko przy pierwszym loadzie) — **zawsze pełny replace tabeli (Krok 0 + Krok 1), nigdy append**.
+**Decyzja:** load przez UI konsoli GCP (Create table → Upload), nie `bq` CLI — operator woli klikać i widzieć błędy w przeglądarce. Za każdym odświeżeniem danych — **zawsze pełny replace tabeli (Krok 0 + Krok 1), nigdy append**.
 
-**Dlaczego replace, nie append:** `structural_pipeline.py` przy każdym uruchomieniu przetwarza WSZYSTKIE dokumenty z `data/raw/structural/` od zera i zapisuje wynik do migawki datowanej `data/store/YYYY-MM-DD-structural.ndjson` (nigdy bezpośrednio do zaufanego `structural-backfill.ndjson` — patrz notatka „Migawki datowane + scalenie ręczne" w `docs/stages/04-backfill.md`). Zaufany `structural-backfill.ndjson` zmienia się WYŁĄCZNIE przez ręczne scalenie potwierdzonej migawki, ale efekt jest ten sam co poprzednio: po scaleniu plik zawsze reprezentuje pełny, aktualny stan całego magazynu, nie sam przyrost nowych rekordów. Append do BigQuery załadowałby więc też rekordy, które tabela już ma — duplikat całej tabeli przy każdym cyklu. Replace jest bezpieczny, bo źródło prawdy to plik NDJSON, nie sama tabela w BigQuery (którą zawsze można odtworzyć od zera).
+**Dlaczego replace, nie append:** `structural_pipeline.py` przy każdym uruchomieniu przetwarza WSZYSTKIE dokumenty od zera do migawki `data/store/YYYY-MM-DD-structural.ndjson` (nigdy wprost do zaufanego `structural-backfill.ndjson` — patrz notatka „Migawki datowane + scalenie ręczne" w `docs/stages/04-backfill.md`). Zaufany plik po scaleniu zawsze reprezentuje pełny stan magazynu, nie przyrost — więc append duplikowałby całą tabelę przy każdym cyklu. Replace jest bezpieczny, bo źródło prawdy to plik NDJSON, nie tabela w BigQuery.
 
-**Jak działa:** pierwszy load (schemat 11 kolumn) przeszedł bez błędów. Schemat od tego czasu rozszerzony o `reference_note` (12. kolumna, patrz notatka „reference_note..." niżej) — tabelę trzeba przeładować od zera, BigQuery nie dokłada kolumn do istniejącej tabeli przez UI uploadu. Ten sam Krok 0 + Krok 1 obowiązuje przy KAŻDYM kolejnym odświeżeniu (np. po dodaniu nowych wyników z etapu „Codzienny flow" w README), nie tylko przy zmianie schematu.
+**Jak działa:** pierwszy load (11 kolumn) przeszedł bez błędów. Schemat rozszerzony o `reference_note` (12. kolumna) — tabelę trzeba przeładować od zera (BigQuery nie dokłada kolumn przez UI uploadu). Ten sam Krok 0 + Krok 1 obowiązuje przy KAŻDYM odświeżeniu, nie tylko przy zmianie schematu.
 
-**Krok 0 — usuń starą tabelę (dane + schemat):** w konsoli GCP → **BigQuery Studio** → nowe okno **SQL query** → wklej i uruchom (podmień `projekt.dataset.tabela` na realną nazwę):
+**Krok 0 — usuń starą tabelę:** BigQuery Studio → nowe okno SQL query → uruchom (podmień nazwę):
 
 ```sql
 DROP TABLE `projekt.dataset.structural_markers`;
 ```
 
-To kasuje tabelę razem ze schematem i wszystkimi wierszami — nieodwracalne, ale bezpieczne, bo źródło prawdy to `data/store/structural-backfill.ndjson`, nie sama tabela. Alternatywnie: w Explorerze kliknij ⋮ przy tabeli → **Delete** → potwierdź nazwą tabeli.
+Kasuje tabelę ze schematem i wierszami — nieodwracalne, ale bezpieczne (źródło prawdy to plik). Alternatywnie: Explorer → ⋮ → Delete.
 
-**Krok 1+ — załaduj od nowa:** ⋮ przy datasecie → **Create table** → Source „Upload" → plik `data/store/structural-backfill.ndjson` → **File format**: `JSONL (Newline delimited JSON)` → Table name jak poprzednio (np. `structural_markers`) → **Schema**: odznacz „Auto detect", **Edit as text**, wklej (11 kolumn — `record_type` usunięty, zawsze był stałą „structural" bez informacji od czasu wycięcia narracji z V1):
+**Krok 1 — załaduj od nowa:** ⋮ przy datasecie → Create table → Source „Upload" → plik `data/store/structural-backfill.ndjson` → File format `JSONL` → Table name jak poprzednio → Schema: odznacz „Auto detect", Edit as text, wklej (11 kolumn — `record_type` usunięty, zawsze był stałą „structural"):
 
 ```json
 [
@@ -92,15 +76,14 @@ To kasuje tabelę razem ze schematem i wszystkimi wierszami — nieodwracalne, a
 ]
 ```
 
-**Pułapki:** `exam_date` jako `DATE` (nie `STRING`) — format źródła zawsze `YYYY-MM-DD` (`structural_pipeline.py::exam_date`), więc BigQuery przyjmie natywnie, bez rzutowania w SQL przy zapytaniach zakresowych.
+**Pułapki:** `exam_date` jako `DATE` (nie `STRING`) — format źródła zawsze `YYYY-MM-DD`, więc BigQuery przyjmie natywnie, bez rzutowania przy zapytaniach zakresowych.
 
 ### `reference_note` — surowa proza zamiast utraty progu referencyjnego
 
-**Decyzja:** `parse_section_chunk` (Warstwa 2) dostał 6. wartość zwracaną — `note`. Wypełnia się WYŁĄCZNIE gdy `reference_low`/`reference_high` finalnie zostają puste, i tylko dla linii pasujących do wąskiego wzorca `^[≥≤<>]\s*=?\s*\d` (zaczyna się od symbolu porównania i cyfry).
+**Decyzja:** `parse_section_chunk` (Warstwa 2) zwraca 6. wartość — `note`. Wypełnia się WYŁĄCZNIE gdy `reference_low`/`reference_high` zostają puste, i tylko dla linii pasujących do wąskiego wzorca `^[≥≤<>]\s*=?\s*\d` (symbol porównania + cyfra).
 
-**Dlaczego:** realny przypadek z lipidogramu — HDL/nie-HDL/LDL wyrażają próg jako zdanie z cytatem wytycznych („≥ 40 mg/dl zgodnie z zaleceniami PTK i PTDL"), czasem kilka progów zależnych od kategorii ryzyka pacjenta („<100 mg/dl - bardzo duże ryzyko / <130 - duże / <145 - zdrowi"). Bez tej zmiany zdanie znikało całkowicie — złamanie zasady „nie gub po cichu" z etapu 3(oryg.). Świadomie NIE próbowano sparsować tego na `reference_low`/`reference_high` — przy wielu progach zależnych od nieznanego kontekstu pacjenta wybór „tego jednego właściwego" byłby zgadywaniem, gorszym niż `NULL`.
+**Dlaczego:** realny przypadek z lipidogramu — HDL/LDL wyrażają próg jako zdanie („≥ 40 mg/dl zgodnie z zaleceniami PTK"), czasem kilka progów zależnych od ryzyka pacjenta („<100 - bardzo duże ryzyko / <130 - duże"). Bez tego zdanie znikało — złamanie „nie gub po cichu". Świadomie NIE parsujemy tego na `low`/`high` — przy wielu progach wybór „tego właściwego" byłby zgadywaniem, gorszym niż `NULL`.
 
-**Jak działa:** wzorzec złapie linię zaczynającą się od symbolu porównania + cyfry, niezależnie od reszty zdania — działa dla „≥ 40 mg/dl zgodnie z..." i „<100 mg/dl - dla osób...", ale świadomie NIE złapie stylu „Stężenie zalecane: powyżej 40 mg/dl" (inne sformułowanie w innym dokumencie tego samego labu, weryfikowane realnie — patrz Pułapki). Wielokrotne dopasowania w jednym chunku (np. 3 progi ryzyka nie-HDL) łączą się przez „ / ".
+**Jak działa:** wzorzec łapie linię od symbolu porównania + cyfry niezależnie od reszty zdania. Świadomie NIE złapie stylu „Stężenie zalecane: powyżej 40 mg/dl" (inne sformułowanie, weryfikowane realnie). Wiele dopasowań w chunku łączy się przez „ / ".
 
-**Pułapki:** (1) wzorzec musi być wąski — szerszy check typu „linia zawiera cyfrę" złapałby też stopkę strony („Strona: 1 z 2") jako fałszywy zakres referencyjny; test na LDL to potwierdził (stopka poprawnie odrzucona). (2) przypis metodologiczny przy eGFR („Wzór wg MDRD") nie zawiera cyfry na początku linii, więc nie trafia do `note` — sprawdzone jawnym testem, nie założeniem. (3) realny efekt na 14 dokumentach: 12→9 rekordów liczbowych bez żadnej informacji o zakresie; pozostałe 9 to albo naprawdę brak progu w źródle, albo inne sformułowanie w drugim dokumencie tego samego labu — świadomie zaakceptowane, nie gonimy każdego wariantu językowego regexem.
-
+**Pułapki:** (1) wzorzec musi być wąski — szerszy check „linia zawiera cyfrę" złapałby stopkę („Strona 1 z 2") jako fałszywy zakres (test na LDL potwierdził odrzucenie). (2) przypis „Wzór wg MDRD" przy eGFR nie ma cyfry na początku, więc nie trafia do `note` — sprawdzone testem. (3) efekt na 14 dok.: 12→9 rekordów bez żadnej informacji o zakresie; reszta to realny brak progu albo inne sformułowanie — świadomie zaakceptowane, nie gonimy każdego wariantu regexem.

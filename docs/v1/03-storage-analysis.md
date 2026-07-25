@@ -46,7 +46,7 @@ To nie budowa silnika zapytań. PRD świadomie nie przewiduje dedykowanego narz�
 
 **Decyzja:** load przez UI konsoli GCP (Create table → Upload), nie `bq` CLI — operator woli klikać i widzieć błędy w przeglądarce. Za każdym odświeżeniem danych — **zawsze pełny replace tabeli (Krok 0 + Krok 1), nigdy append**.
 
-**Dlaczego replace, nie append:** `structural_pipeline.py` przy każdym uruchomieniu przetwarza WSZYSTKIE dokumenty od zera do migawki `data/store/YYYY-MM-DD-structural.ndjson` (nigdy wprost do zaufanego `structural-backfill.ndjson` — patrz notatka „Migawki datowane + scalenie ręczne" w `docs/stages/04-backfill.md`). Zaufany plik po scaleniu zawsze reprezentuje pełny stan magazynu, nie przyrost — więc append duplikowałby całą tabelę przy każdym cyklu. Replace jest bezpieczny, bo źródło prawdy to plik NDJSON, nie tabela w BigQuery.
+**Dlaczego replace, nie append:** `structural_pipeline.py` przy każdym uruchomieniu przetwarza WSZYSTKIE dokumenty od zera do migawki `data/store/YYYY-MM-DD-structural.ndjson` (nigdy wprost do zaufanego `structural-backfill.ndjson` — patrz notatka „Migawki datowane + scalenie ręczne" w `docs/v1/04-backfill.md`). Zaufany plik po scaleniu zawsze reprezentuje pełny stan magazynu, nie przyrost — więc append duplikowałby całą tabelę przy każdym cyklu. Replace jest bezpieczny, bo źródło prawdy to plik NDJSON, nie tabela w BigQuery.
 
 **Jak działa:** pierwszy load (11 kolumn) przeszedł bez błędów. Schemat rozszerzony o `reference_note` (12. kolumna) — tabelę trzeba przeładować od zera (BigQuery nie dokłada kolumn przez UI uploadu). Ten sam Krok 0 + Krok 1 obowiązuje przy KAŻDYM odświeżeniu, nie tylko przy zmianie schematu.
 

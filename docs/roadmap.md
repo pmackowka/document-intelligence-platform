@@ -1,6 +1,6 @@
 # Roadmap — wersje po V1
 
-> Status: backlog strategiczny, **nie kontrakt**. Kontraktem dla bieżącej pracy jest `docs/prd.md` (Version 1).
+> Status: backlog strategiczny, **nie kontrakt**. Kontraktem dla bieżącej pracy jest `docs/v1/prd.md` (Version 1).
 > Wracamy tu po ukończeniu V1 (S1–S4 zmierzone w `stages/08-backfill.md`). Każda wersja przed startem przechodzi własną sesję sokratejską i dostaje własny PRD.
 > Zastąpił pierwotny zarys `Document-Intelligence-Platform.md` (historia w gicie), który mieszał plan V1 z roadmapą i był sprzeczny z decyzjami PRD.
 
@@ -12,7 +12,7 @@ Każda wersja kończy się działającym produktem i nie wymaga przepisywania po
 
 ## Fundament — Version 1 (w realizacji)
 
-Pełny zakres i wymagania: `docs/prd.md`. Diagram poglądowy — wszystkie kolejne wersje budują na tych modułach:
+Pełny zakres i wymagania: `docs/v1/prd.md`. Diagram poglądowy — wszystkie kolejne wersje budują na tych modułach:
 
 ```mermaid
 flowchart TD

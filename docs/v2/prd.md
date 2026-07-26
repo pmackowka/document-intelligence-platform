@@ -1,8 +1,10 @@
 # PRD: Document Intelligence Platform — Version 2 (MCP server)
 
-> Status: **v2.0 — pierwsza wersja po sesji sokratejskiej, oczekuje review** (spisany po sesji `/grill-with-docs`, na podstawie `docs/v2/00-planning.md` i `docs/roadmap.md`, sekcja „Version 2 — MCP server").
+> Status: **v2.1 — po rundzie review 1, oczekuje dalszego review/zatwierdzenia** (spisany po sesji `/grill-with-docs`, na podstawie `docs/v2/00-planning.md` i `docs/roadmap.md`, sekcja „Version 2 — MCP server").
 > Kontrakt V1 (`docs/v1/prd.md`) pozostaje zamknięty i niezmieniony — V2 buduje na jego module bez re-otwierania jego ustaleń.
 > Terminologia domenowa: `CONTEXT.md`. Decyzje architektoniczne trudne do odwrócenia: `docs/adr/0001-mcp-stdio-no-listening-port.md`, `docs/adr/0002-mcp-read-only.md`.
+>
+> **v2.1 (runda review 1):** cztery luki z v2.0 rozstrzygnięte — strategia weryfikacji serwera (testy jednostkowe + MCP Inspector przed Desktopem), reużycie kodu z `report.py` (wydzielony wspólny moduł, nie import ze skryptu CLI), logowanie zapytań (brak logowania treści na dysk), ciągłość workflow terminalowego (bez zmian, MCP server jako trzeci równoległy kanał).
 
 ---
 
@@ -40,6 +42,7 @@ Oba kryteria wymagają dowodu na poziomie produktu (realne połączenie, realne 
    - Nierozpoznany identyfikator → jawny błąd/status „nie znaleziono" z podpowiedzią najbliższych dopasowań. Nigdy cicha pusta lista (myliłaby się z „marker istnieje, zero pomiarów").
 4. **`compare_markers(lista identyfikatorów)`** — ta sama logika identyfikacji/jednostek/braku interpretacji co `get_marker_trend`, zastosowana do N markerów. Zwraca N niezależnych serii. Świadomie bez łączenia po dacie badania (wymagałoby zgadywania, które pomiary „odpowiadają sobie").
 5. **Klienci:** Claude Code, Claude Desktop, inne — wyłącznie świadomie skonfigurowani przez operatora (per-klient opt-in w konfiguracji klienta), nie dowolny proces w systemie.
+6. **Współistnienie z workflow V1.** `report.py` (raport Markdown „na wizytę") i bezpośrednie czytanie NDJSON w Claude Code zostają bez zmian, równolegle. MCP server to dodatkowy, trzeci kanał — nie zamiennik żadnego z dwóch istniejących.
 
 ### Out of scope (not now)
 
@@ -70,7 +73,9 @@ Wymóg prywatności pozostaje **miękki** — bez zmian względem V1: to nie sys
 
 - **SDK:** oficjalny Python SDK (z wbudowanym FastMCP) — spójne z całym istniejącym stackiem (`structural_pipeline.py`, `report.py`), zero drugiego stacku językowego tylko dla tej warstwy.
 - **Transport:** stdio, bez nasłuchującego portu.
-- **Reużycie kodu:** serwer korzysta z istniejącej logiki wczytywania NDJSON i mapowania kod↔etykieta (`marker_labels.yml`) zamiast duplikować ją od nowa.
+- **Reużycie kodu:** wydzielony wspólny moduł (np. `src/storage.py`) z `load_records()` i logiką rozwiązywania identyfikatora markera (kod↔etykieta, `marker_labels.yml`). `report.py` refaktoryzowany, żeby korzystać z tego samego modułu zamiast duplikować logikę — serwer MCP nie importuje ze skryptu CLI.
+- **Weryfikacja przed produkcją:** (1) testy jednostkowe czystej logiki — identyfikacja markera, grupowanie po jednostce, błąd dla nieznanego identyfikatora; (2) ręczne wywołanie narzędzi przez MCP Inspector (`mcp dev` z Python SDK) bez konfigurowania Desktopa; (3) dopiero potem podpięcie do realnego Desktopa jako dowód S1/S2. Trzy warstwy rosnącego kosztu, jak eskalacja skali backfillu w V1 (14→40→120 dok.).
+- **Logowanie:** zero logowania treści zapytań (identyfikator markera, wartości, daty) na dysk — żadnego debug logu z danymi. Claude Desktop może przechwytywać stderr serwera do własnych logów diagnostycznych połączenia — poza kontrolą tego serwera, dlatego świadomie nic wrażliwego tam się nie drukuje.
 - **Środowisko:** lokalnie na Macu, jak V1. Bez chmury obliczeniowej.
 - **Dane:** czyta wyłącznie `data/store/structural-backfill.ndjson`. Nie zapisuje nigdzie.
 
@@ -82,6 +87,8 @@ Wymóg prywatności pozostaje **miękki** — bez zmian względem V1: to nie sys
 | Realne wartości pomiarów trafiają teraz do kontekstu modelu klienta MCP (rozszerzenie zakresu względem V1) | Świadomie zaakceptowane jako rdzeń wartości V2; granica zaufania przesunięta na „kto może się połączyć" (stdio, opt-in per klient) zamiast „co idzie do API" |
 | Operator błędnie skonfiguruje serwer w nieznanym/niezaufanym kliencie MCP | Poza kontrolą serwera — to decyzja operatora per klient, nazwana wprost w `docs/adr/0001` |
 | V3 (przeniesienie do chmury) wymaga rewizji modelu stdio/lokalnego | Nazwane już w `docs/roadmap.md` i `docs/adr/0001` — rewizja threat model to jawny punkt PRD V3, nie coś do rozwiązania teraz |
+| Debug log lub log klienta MCP przypadkiem zapisuje treść zapytania (marker, wartość) na dysk | Serwer świadomie nie drukuje treści zapytań/odpowiedzi nigdzie — ani do własnego logu, ani do stderr; jedyny kanał z danymi to zwracana wartość narzędzia |
+| Błąd w kontrakcie narzędzia wykryty dopiero przez realnego klienta (Desktop), trudny do zdiagnozowania | Trzywarstwowa weryfikacja przed produkcją (testy jednostkowe → MCP Inspector → Desktop) izoluje, czy problem jest w serwerze, zanim wejdzie w grę interpretacja modelu klienta |
 
 ### Rozstrzygnięte (sesja sokratejska, `/grill-with-docs`)
 
@@ -97,3 +104,10 @@ Wymóg prywatności pozostaje **miękki** — bez zmian względem V1: to nie sys
 - Kształt wyjścia → surowe rekordy, zero interpretacji.
 - `compare_markers` → N niezależnych serii, bez łączenia po dacie.
 - Nieznany marker → jawny błąd z podpowiedzią.
+
+### Rozstrzygnięte (runda review 1)
+
+- Strategia weryfikacji → testy jednostkowe + MCP Inspector, potem dopiero realny Desktop.
+- Reużycie kodu z `report.py` → wydzielony wspólny moduł (`src/storage.py`), nie import ze skryptu CLI.
+- Logowanie zapytań → brak logowania treści na dysk, żaden debug log z danymi.
+- Ciągłość workflow terminalowego → bez zmian, MCP server jako trzeci równoległy kanał obok `report.py` i czytania NDJSON w Claude Code.

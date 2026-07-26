@@ -1,10 +1,12 @@
 # PRD: Document Intelligence Platform — Version 2 (MCP server)
 
-> Status: **v2.1 — po rundzie review 1, oczekuje dalszego review/zatwierdzenia** (spisany po sesji `/grill-with-docs`, na podstawie `docs/v2/00-planning.md` i `docs/roadmap.md`, sekcja „Version 2 — MCP server").
+> Status: **v2.1 — zatwierdzony** (spisany po sesji `/grill-with-docs`, na podstawie `docs/v2/00-planning.md` i `docs/roadmap.md`, sekcja „Version 2 — MCP server").
 > Kontrakt V1 (`docs/v1/prd.md`) pozostaje zamknięty i niezmieniony — V2 buduje na jego module bez re-otwierania jego ustaleń.
 > Terminologia domenowa: `CONTEXT.md`. Decyzje architektoniczne trudne do odwrócenia: `docs/adr/0001-mcp-stdio-no-listening-port.md`, `docs/adr/0002-mcp-read-only.md`.
 >
 > **v2.1 (runda review 1):** cztery luki z v2.0 rozstrzygnięte — strategia weryfikacji serwera (testy jednostkowe + MCP Inspector przed Desktopem), reużycie kodu z `report.py` (wydzielony wspólny moduł, nie import ze skryptu CLI), logowanie zapytań (brak logowania treści na dysk), ciągłość workflow terminalowego (bez zmian, MCP server jako trzeci równoległy kanał).
+>
+> **Zatwierdzenie:** operator uznał rundę 1 za wystarczającą i świadomie pominął rundę 2 (którą V1 miało) — decyzja odnotowana w `docs/v2/00-planning.md`.
 
 ---
 

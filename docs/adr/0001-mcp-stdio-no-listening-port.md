@@ -1,0 +1,5 @@
+# MCP server V2: transport stdio, bez nasłuchującego portu
+
+Roadmapowy diagram V2 pokazuje wielu klientów (Claude Code, Claude Desktop, „inne klienty MCP") łączących się z jednym serwerem — co sugeruje serwer sieciowy nasłuchujący na porcie, dostępny każdemu lokalnemu procesowi. Zdecydowano inaczej: transport **stdio**, serwer uruchamiany jako subproces przez klienta, na podstawie jego własnej, świadomie edytowanej konfiguracji (np. plik config Claude Desktop). „Wielu klientów" oznacza wielu *świadomie skonfigurowanych* klientów, nie dowolny proces w systemie.
+
+**Dlaczego:** utrzymuje tę samą klasę ryzyka co V1 (dane opuszczają dysk tylko za jawną zgodą operatora, per klient) zamiast wprowadzać nową — serwer nasłuchujący na porcie byłby odpytywalny przez dowolną aplikację na Macu, bez autoryzacji. V3 (przeniesienie do chmury, `docs/roadmap.md`) już dziś zapowiada napięcie z modelem lokalnym/stdio — rewizja threat model przy V3 musi świadomie zdecydować, czy i jak to zmienić, a nie zastać to jako przeoczenie.

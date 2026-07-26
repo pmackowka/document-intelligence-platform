@@ -8,8 +8,8 @@ Zalążek zakresu (do zweryfikowania/rozszerzenia w sesji sokratejskiej, nie do 
 
 ## Zakres / Definition of Done
 
-- [ ] Sesja sokratejska V2 (zakres, granice, kryteria sukcesu, wybór SDK/transportu MCP)
-- [ ] `docs/v2/prd.md` — pierwsza wersja (v2.0) spisana
+- [x] Sesja sokratejska V2 (zakres, granice, kryteria sukcesu, wybór SDK/transportu MCP) — `/grill-with-docs`, ustalenia w `CONTEXT.md` i `docs/adr/0001`, `docs/adr/0002`
+- [x] `docs/v2/prd.md` — pierwsza wersja (v2.0) spisana
 - [ ] Review PRD v2 (rundy jak przy V1 — `docs/v1/prd.md` miało 2 rundy przed zatwierdzeniem)
 - [ ] PRD v2 zatwierdzony → status „zatwierdzony" w nagłówku pliku
 - [ ] Pierwszy plik etapu implementacyjnego V2 (`docs/v2/01-...md`, płasko obok `prd.md` — bez podfolderu `stages/`, ta sama metodologia co V1) założony na podstawie zatwierdzonego PRD

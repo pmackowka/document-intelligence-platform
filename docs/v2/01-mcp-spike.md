@@ -8,7 +8,7 @@ Analogicznie do `docs/v1/01-ocr-spike.md`, który dowiódł, że wybrany silnik 
 
 ## Zakres / Definition of Done
 
-- [ ] Minimalny serwer MCP w Pythonie (oficjalny SDK, FastMCP) z jednym trywialnym narzędziem testowym — dowód, że transport stdio w ogóle działa
+- [x] Minimalny serwer MCP w Pythonie (oficjalny SDK, FastMCP) z jednym trywialnym narzędziem testowym — `src/mcp_server.py`, narzędzie `ping` → `"pong"`; import i rejestracja narzędzia zweryfikowane lokalnie. Dowód działania transportu stdio z realnym klientem — kolejny krok (Inspector)
 - [ ] Uruchomienie i ręczne wywołanie przez MCP Inspector (`mcp dev` z Python SDK, lub `npx @modelcontextprotocol/inspector`) — potwierdzona poprawna odpowiedź bez konfigurowania Desktopa
 - [ ] Podpięcie do Claude Desktop (konfiguracja klienta po stronie operatora) — realne zapytanie end-to-end z Desktopa do trywialnego narzędzia
 - [ ] Decyzja: lokalizacja i nazwa pliku serwera w `src/` (np. `src/mcp_server.py`), spójna z resztą stacku
@@ -16,4 +16,10 @@ Analogicznie do `docs/v1/01-ocr-spike.md`, który dowiódł, że wybrany silnik 
 
 ## Notatki
 
-_(puste — notatki powstają w trakcie realizacji powyższych kroków, nie z góry)_
+### Wersja SDK — stabilna v1, nie beta v2
+
+**Decyzja:** `uv add "mcp[cli]"` bez przypięcia wersji — rozwiązało się do `mcp==1.28.1`.
+
+**Dlaczego:** oficjalne repo SDK ma równolegle linię v2 w becie (przygotowywaną pod specyfikację MCP z 2026-07-28), z jawnym ostrzeżeniem „nie używać produkcyjnie". Instalacja bez jawnego żądania pre-release nie łapie bety — potwierdzone realnym `uv add`, nie tylko dokumentacją.
+
+**Pułapki:** przy kolejnych `uv add`/`uv sync` w tym projekcie pilnować, żeby nikt (w tym przyszła sesja) nie przypiął przypadkiem `mcp==2.x` z jakiegoś tutoriala pisanego pod nową wersję — API między liniami się różni.

@@ -44,15 +44,34 @@ Kroki do powtórzenia testu ręcznie:
 
 ### Podpięcie do Claude Desktop — rejestracja serwera lokalnego
 
-**Decyzja:** rejestracja przez `uv run mcp install src/mcp_server.py --name document-intelligence-platform` (komenda z `mcp[cli]`), nie ręczna edycja configu od zera — bo sama dopisuje poprawny wpis do configu Claude Desktop, w tym pełną ścieżkę do binarki `uv` (bez tego Desktop nie znalazłby komendy, bo odpala procesy poza `$PATH` terminala operatora). Wpis ląduje w `~/Library/Application Support/Claude/claude_desktop_config.json`, klucz `mcpServers.document-intelligence-platform`, z komendą `/opt/homebrew/bin/uv run --frozen --with mcp[cli] mcp run <ścieżka absolutna>` (`--frozen` = start z zamrożonego `uv.lock`, bez re-resolvowania zależności przy każdym uruchomieniu). Ten sam plik JSON jest współdzielony z resztą configu appki (Cowork, preferencje UI) — dopisanie klucza nie rusza reszty. Widoczność w UI: Settings → Developer → **Local MCP servers** (nie „Connectors" — to osobna lista, dla connectorów webowych/OAuth); żeby narzędzie było faktycznie dostępne w rozmowie, trzeba je dodatkowo włączyć per-czat: „+" → Connectors → toggle przy nazwie serwera.
+**Decyzja:** rejestracja przez `uv run mcp install src/mcp_server.py --name document-intelligence-platform` (komenda z `mcp[cli]`), nie ręczna edycja configu od zera — bo sama dopisuje poprawny wpis do configu Claude Desktop, w tym pełną ścieżkę do binarki `uv` (bez tego Desktop nie znalazłby komendy, bo odpala procesy poza `$PATH` terminala operatora). Wpis ląduje w `~/Library/Application Support/Claude/claude_desktop_config.json`, klucz `mcpServers.document-intelligence-platform`, z komendą `/opt/homebrew/bin/uv run --frozen --with mcp[cli] mcp run <ścieżka absolutna>` (`--frozen` = start z zamrożonego `uv.lock`, bez re-resolvowania zależności przy każdym uruchomieniu). Ten sam plik JSON jest współdzielony z resztą configu appki (Cowork, preferencje UI) — dopisanie klucza nie rusza reszty. Widoczność w UI: Settings → Developer → **Local MCP servers** (nie „Connectors" — to osobna lista, dla connectorów webowych/OAuth). Po zarejestrowaniu serwer jest od razu dostępny w rozmowie — toggle w „+" → Connectors jest domyślnie włączony, ręczne włączanie nie było potrzebne.
 
-Kroki wykonane przez operatora:
+Wpis, jaki `mcp install` faktycznie dopisał do `claude_desktop_config.json`:
 
-1. Rejestracja: `uv run mcp install src/mcp_server.py --name document-intelligence-platform` z katalogu projektu.
-2. Pełny restart Claude Desktop (Cmd+Q, nie samo zamknięcie okna) — potrzebne 2-3 razy, serwer nie pojawił się po pierwszym.
-3. W międzyczasie system macOS wyświetlił popup z prośbą o zgodę na dostęp `uv` do folderu Dokumenty — zatwierdzony (realny blocker, patrz Pułapki).
-4. Weryfikacja: Settings → Developer → Local MCP servers → `document-intelligence-platform` widoczny ze statusem „running".
-5. W oknie czatu: „+" → Connectors → włączenie toggle przy nazwie serwera.
-6. Wywołanie narzędzia `ping` z czatu — odpowiedź `pong` potwierdzona, transport stdio działa end-to-end.
+```jsonc
+"mcpServers": {
+  "document-intelligence-platform": {        // nazwa z --name, ta widoczna w Settings → Developer → Local MCP servers
+    "command": "/opt/homebrew/bin/uv",       // pełna ścieżka do binarki — Desktop nie zna $PATH terminala operatora
+    "args": [
+      "run",
+      "--frozen",                             // start z zamrożonego uv.lock, bez re-resolvowania zależności przy każdym uruchomieniu
+      "--with",
+      "mcp[cli]",                             // dogrywa pakiet MCP do środowiska tego konkretnego wywołania
+      "mcp",
+      "run",
+      "/Users/p/Documents/dev/Document-Intelligence-Platform/src/mcp_server.py"  // ścieżka absolutna do serwera
+    ]
+  }
+}
+```
 
-**Pułapki:** macOS (TCC — Transparency, Consent and Control) blokuje procesowi `uv` cichy dostęp do `~/Documents` (projekt leży pod `~/Documents/dev/...`) — pierwsza próba uruchomienia kończy się bez błędu w logach Desktopa, po prostu serwer nie pojawia się na liście. System pyta o zgodę dopiero po którymś z kolejnych restartów appki (nie zawsze przy pierwszym) — dopiero zatwierdzenie tego popupu odblokowuje realny odczyt pliku serwera. Diagnostyka mylona z problemem konfiguracji: trzy różne miejsca (Connectors, Local MCP servers, sam czat) zgodnie pokazywały brak serwera, co sugerowało błąd w JSON-ie lub niekompatybilność wersji appki — a przyczyna była systemowa, nie aplikacyjna.
+Kroki do powtórzenia podpięcia:
+
+1. Wejście do katalogu projektu (świeży terminal startuje w katalogu domowym, nie tutaj): `cd /Users/p/Documents/dev/Document-Intelligence-Platform`
+2. Rejestracja: `uv run mcp install src/mcp_server.py --name document-intelligence-platform`
+3. Pełny restart Claude Desktop (Cmd+Q, nie samo zamknięcie okna) — potrzebne 2-3 razy, serwer nie pojawił się po pierwszym.
+4. W międzyczasie system macOS wyświetlił popup z prośbą o zgodę na dostęp `uv` do folderu Dokumenty — zatwierdzony (realny blocker, patrz Pułapki).
+5. Weryfikacja: Settings → Developer → Local MCP servers → `document-intelligence-platform` widoczny ze statusem „running".
+6. Wywołanie narzędzia `ping` z czatu — odpowiedź `pong` potwierdzona, transport stdio działa end-to-end. Toggle w „+" → Connectors sprawdzony przy okazji: domyślnie już włączony, żadna dodatkowa akcja nie była potrzebna.
+
+**Pułapki:** macOS (TCC) blokuje procesowi `uv` cichy dostęp do `~/Documents` bez żadnego błędu w logach Desktopa — serwer po prostu nie pojawia się na żadnej z list, dopóki po którymś restarcie appki nie zatwierdzisz systemowego popupu o zgodę, co łatwo pomylić z błędem w konfiguracji czy appce zamiast z blokadą systemową.

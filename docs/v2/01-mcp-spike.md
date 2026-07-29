@@ -10,9 +10,9 @@ Analogicznie do `docs/v1/01-ocr-spike.md`, który dowiódł, że wybrany silnik 
 
 - [x] Minimalny serwer MCP w Pythonie (oficjalny SDK, FastMCP) z jednym trywialnym narzędziem testowym — `src/mcp_server.py`, narzędzie `ping` → `"pong"`; import i rejestracja narzędzia zweryfikowane lokalnie. Dowód działania transportu stdio z realnym klientem — kolejny krok (Inspector)
 - [x] Uruchomienie i ręczne wywołanie przez MCP Inspector (`uv run mcp dev src/mcp_server.py`) — połączenie STDIO nawiązane (`Connected`, MCP 2025-11-25), narzędzie `ping` wywołane ręcznie z UI, odpowiedź `pong` potwierdzona w panelu Results
-- [ ] Podpięcie do Claude Desktop (konfiguracja klienta po stronie operatora) — realne zapytanie end-to-end z Desktopa do trywialnego narzędzia
-- [ ] Decyzja: lokalizacja i nazwa pliku serwera w `src/` (np. `src/mcp_server.py`), spójna z resztą stacku
-- [ ] Sign-off operatora: serwer połączony i odpowiada z realnego Claude Desktop, bez ręcznego obejścia
+- [x] Podpięcie do Claude Desktop (konfiguracja klienta po stronie operatora) — realne zapytanie end-to-end z Desktopa do trywialnego narzędzia; `ping` wywołany z czatu Desktop, odpowiedź `pong` potwierdzona
+- [x] Decyzja: lokalizacja i nazwa pliku serwera w `src/` (np. `src/mcp_server.py`), spójna z resztą stacku
+- [x] Sign-off operatora: serwer połączony i odpowiada z realnego Claude Desktop, bez ręcznego obejścia
 
 ## Notatki
 
@@ -41,3 +41,18 @@ Kroki do powtórzenia testu ręcznie:
 7. `Ctrl+C` w terminalu zamyka Inspector i serwer
 
 **Pułapki:** Inspector to osobny proces webowy, nie kończy się sam — trzeba go świadomie zatrzymać (tu: zabity po weryfikacji), inaczej zostaje w tle i trzyma port.
+
+### Podpięcie do Claude Desktop — rejestracja serwera lokalnego
+
+**Decyzja:** rejestracja przez `uv run mcp install src/mcp_server.py --name document-intelligence-platform` (komenda z `mcp[cli]`), nie ręczna edycja configu od zera — bo sama dopisuje poprawny wpis do configu Claude Desktop, w tym pełną ścieżkę do binarki `uv` (bez tego Desktop nie znalazłby komendy, bo odpala procesy poza `$PATH` terminala operatora). Wpis ląduje w `~/Library/Application Support/Claude/claude_desktop_config.json`, klucz `mcpServers.document-intelligence-platform`, z komendą `/opt/homebrew/bin/uv run --frozen --with mcp[cli] mcp run <ścieżka absolutna>` (`--frozen` = start z zamrożonego `uv.lock`, bez re-resolvowania zależności przy każdym uruchomieniu). Ten sam plik JSON jest współdzielony z resztą configu appki (Cowork, preferencje UI) — dopisanie klucza nie rusza reszty. Widoczność w UI: Settings → Developer → **Local MCP servers** (nie „Connectors" — to osobna lista, dla connectorów webowych/OAuth); żeby narzędzie było faktycznie dostępne w rozmowie, trzeba je dodatkowo włączyć per-czat: „+" → Connectors → toggle przy nazwie serwera.
+
+Kroki wykonane przez operatora:
+
+1. Rejestracja: `uv run mcp install src/mcp_server.py --name document-intelligence-platform` z katalogu projektu.
+2. Pełny restart Claude Desktop (Cmd+Q, nie samo zamknięcie okna) — potrzebne 2-3 razy, serwer nie pojawił się po pierwszym.
+3. W międzyczasie system macOS wyświetlił popup z prośbą o zgodę na dostęp `uv` do folderu Dokumenty — zatwierdzony (realny blocker, patrz Pułapki).
+4. Weryfikacja: Settings → Developer → Local MCP servers → `document-intelligence-platform` widoczny ze statusem „running".
+5. W oknie czatu: „+" → Connectors → włączenie toggle przy nazwie serwera.
+6. Wywołanie narzędzia `ping` z czatu — odpowiedź `pong` potwierdzona, transport stdio działa end-to-end.
+
+**Pułapki:** macOS (TCC — Transparency, Consent and Control) blokuje procesowi `uv` cichy dostęp do `~/Documents` (projekt leży pod `~/Documents/dev/...`) — pierwsza próba uruchomienia kończy się bez błędu w logach Desktopa, po prostu serwer nie pojawia się na liście. System pyta o zgodę dopiero po którymś z kolejnych restartów appki (nie zawsze przy pierwszym) — dopiero zatwierdzenie tego popupu odblokowuje realny odczyt pliku serwera. Diagnostyka mylona z problemem konfiguracji: trzy różne miejsca (Connectors, Local MCP servers, sam czat) zgodnie pokazywały brak serwera, co sugerowało błąd w JSON-ie lub niekompatybilność wersji appki — a przyczyna była systemowa, nie aplikacyjna.

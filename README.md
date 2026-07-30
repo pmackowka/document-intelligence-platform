@@ -7,7 +7,7 @@ Lokalna platforma do przetwarzania osobistej dokumentacji medycznej z analizą t
 - **`docs/v1/prd.md`** — kontrakt Version 1 (zakres, wymagania, kryteria sukcesu)
 - **`docs/roadmap.md`** — backlog wersji V2–V4 z diagramami architektury
 - **`docs/v1/`** — plan implementacji krok po kroku (etapy 00–04)
-- **`docs/v2/`** — Version 2 (MCP server), na razie w fazie planowania — patrz `docs/v2/00-planning.md`
+- **`docs/v2/`** — Version 2 (MCP server), w implementacji — patrz `docs/v2/prd.md`
 - **`CLAUDE.md`** — konwencje projektu dla sesji Claude Code
 
 ## Stack
@@ -51,6 +51,26 @@ Dopiero teraz dane liczą się „na serio" — BigQuery i dalsza analiza czytaj
 **Przykład:** wracasz z laboratorium z nowym wynikiem TSH, kopiujesz plik do `data/raw/structural/`, wklejasz prompt 1. Marker już w słowniku → od razu dostajesz migawkę i raport do sprawdzenia. Nowy marker/lab → Claude Code najpierw zapyta o zatwierdzenie proponowanego aliasu, dopiero potem wygeneruje raport. Po sprawdzeniu kolumny „Źródło" wklejasz prompt 2.
 
 Dokument z nieczytelnym OCR (za mało wyciągniętego tekstu) nie wejdzie do wyników w ogóle — Claude Code to zgłosi w podsumowaniu; sprawdź skan ręcznie (kąt, ostrość, czy to na pewno badanie krwi/moczu).
+
+## MCP server (V2) — przykład działania
+
+Version 2 udostępnia te same dane przez protokół MCP — Claude Desktop (i inni świadomie skonfigurowani klienci MCP) mogą pytać o trendy i porównania bez dostępu do plików, tak jak dotąd wyłącznie Claude Code w terminalu.
+
+**Zapytanie w Claude Desktop:**
+> porównaj moje wyniki hemoglobiny i OB w czasie
+
+**Odpowiedź (`compare_markers`, dane realne z zaufanego magazynu):**
+
+| Data | HGB (g/dl) | Norma HGB | OB (mm/h) | Norma OB |
+|---|---|---|---|---|
+| 2020-12-21 | 14,1 | 13,7–17,5 | 10 | 2–12 |
+| 2023-01-23 | 14,9 | 13,7–17,5 | 3 | 2–12 |
+| 2026-04-20 | – | – | 9 | 2–12 |
+| 2026-07-21 | 14,2 | 13,5–18,0 | – | 2–12 |
+
+Oba markery w normie, bez niepokojącego trendu — HGB stabilne przez 6 lat, OB waha się w obrębie normy (wrażliwe na infekcje/stan zapalny z ostatnich dni, więc pojedyncze odczyty nie mówią wiele bez kontekstu klinicznego).
+
+Narzędzie zwraca dwie w pełni niezależne serie (bez łączenia po dacie — różne markery bywają badane różnego dnia); to model po stronie odpowiedzi złożył je w jedną czytelną tabelę.
 
 ## Pitch — projekt w 30 sekund
 

@@ -14,8 +14,8 @@ Etap 1 dowiódł, że transport stdio i realny klient (Claude Desktop) się doga
 - [x] Zero logowania treści zapytań/odpowiedzi (identyfikator markera, wartości, daty) na dysk ani do stderr (PRD, Tech Constraints — Logowanie) — zweryfikowane przez grep na `print(`/`logging`/`stderr`/`stdout`/zapis w `mcp_server.py` i `storage.py`: jedyny `open()` to odczyt zaufanego magazynu w `load_records`, brak jakiegokolwiek printa czy loggera
 - [x] Testy jednostkowe kontraktu narzędzi (PRD, warstwa 1 z 3 weryfikacji): `tests/test_mcp_server.py` — kształt wyjścia dla markera z jedną serią (HGB), z wieloma seriami/jednostkami (NEU: `%`/`tys/µl`), nierozpoznany identyfikator; `compare_markers` dla 2 znanych markerów i dla mieszanki znany/nieznany. `load_records` podmieniony (monkeypatch) na literały syntetyczne — testy niezależne od prywatnego magazynu; `resolve_marker` korzysta z realnego `marker_labels.yml` (plik domenowy, nie PII, już przetestowany osobno)
 - [x] Weryfikacja przez MCP Inspector (warstwa 2 z 3) — ręczne wywołanie obu narzędzi bez konfigurowania Desktopa. Potwierdzone: `get_marker_trend("Ferrytyna")` → `ok`/`FERR` z serią; `get_marker_trend("xydd")` → `not_found` bez podpowiedzi; `compare_markers(["Hemoglobina", "OB"])` → dwie w pełni niezależne serie (HGB 4 pomiary, ESR/OB 3 pomiary, różne daty)
-- [ ] Sign-off S1: realne zapytanie z Claude Desktop o trend markera z ≥3 pomiarami (np. „pokaż trend ferrytyny") — poprawna odpowiedź, bez ręcznego kroku pośredniego
-- [ ] Sign-off S2: realne zapytanie z Claude Desktop porównujące ≥2 markery (np. „porównaj hemoglobinę i OB") — N niezależnych serii, bez ręcznego kroku pośredniego
+- [x] Sign-off S1: realne zapytanie z Claude Desktop o trend markera z ≥3 pomiarami (np. „pokaż trend ferrytyny") — poprawna odpowiedź, bez ręcznego kroku pośredniego. Zadziałało od razu po naprawie rejestracji serwera (patrz notatka `--directory` niżej)
+- [x] Sign-off S2: realne zapytanie z Claude Desktop porównujące ≥2 markery — N niezależnych serii, bez ręcznego kroku pośredniego. Dosłowna fraza z PRD („porównaj hemoglobinę i OB") **nie** triggerowała narzędzia — model odpowiedział ogólną wiedzą medyczną zamiast sięgnąć po dane. Doprecyzowana fraza „porównaj moje wyniki hemoglobiny i OB w czasie" zadziałała poprawnie: `compare_markers` wywołane, realne dane, dwie niezależne serie
 
 ## Notatki
 
@@ -63,3 +63,28 @@ Kroki do powtórzenia:
 8. `Ctrl+C` zamyka Inspector
 
 **Pułapki:** brak nowych — te same co w etapie 1 (Inspector to osobny proces webowy, trzeba go świadomie zatrzymać, inaczej zostaje w tle i trzyma port).
+
+### Sign-off S1/S2 — weryfikacja z Claude Desktop
+
+**Jak działa:** serwer w Desktopie to długożyjący podproces spawnowany przy starcie appki — zmiany w `mcp_server.py`/`storage.py` (nowe narzędzia) nie są widoczne, dopóki proces nie zostanie zrestartowany, tak jak w etapie 1.
+
+Kroki do powtórzenia:
+
+1. Pełny restart Claude Desktop (Cmd+Q, nie samo zamknięcie okna) — żeby podproces serwera podniósł się z aktualnym kodem (`get_marker_trend`, `compare_markers`)
+2. Nowa rozmowa w Desktopie
+3. (Opcjonalnie) „+" → Connectors → sprawdzić, że `document-intelligence-platform` ma toggle włączony (domyślnie tak, patrz etap 1)
+4. **S1:** wpisać zapytanie w naturalnym języku, np. „pokaż trend ferrytyny" — bez wskazywania narzędzia czy identyfikatora wprost. Oczekiwane: model sam wybiera `get_marker_trend`, odpowiedź zawiera realne wartości (np. `25.0 ng/ml`, data `2026-06-26`) zgodne z tym, co zwrócił Inspector
+5. **S2:** w tej samej lub nowej rozmowie wpisać, np. „porównaj hemoglobinę i OB" — oczekiwane: model wybiera `compare_markers`, odpowiedź referuje do dwóch niezależnych serii (HGB i ESR/OB) bez prób sztucznego łączenia ich po dacie
+6. Sign-off = potwierdzenie, że oba zapytania zadziałały **bez żadnego ręcznego kroku pośredniego** (bez podawania kodu markera, bez włączania narzędzia ręcznie, bez poprawek)
+
+**Pułapki:** dosłowna fraza z PRD dla S2 („porównaj hemoglobinę i OB") nie wystarczyła — model potraktował ją jako pytanie edukacyjne (czym różnią się te markery) i nie sięgnął po `compare_markers` w ogóle, mimo że narzędzie działało poprawnie (potwierdzone niezależnie przez Inspector). Zapytanie musiało jawnie sygnalizować dane osobiste i oś czasu („moje wyniki", „w czasie") — to wrażliwość promptu, nie błąd kodu ani narzędzia; sam kształt wyjścia narzędzia (N niezależnych serii, bez łączenia po dacie) zostaje bez zmian, model dopiero PO stronie odpowiedzi złożył dwie serie w jedną czytelną tabelę po dacie — to jego rola interpretacyjna, zgodna z PRD, nie naruszenie kontraktu narzędzia.
+
+### Desktop nie widział nowych narzędzi — brakujący `--directory`
+
+**Decyzja:** dodany `--directory /Users/p/Documents/dev/Document-Intelligence-Platform` do `args` w `claude_desktop_config.json`, zaraz po `run`.
+
+**Dlaczego:** `mcp install` (etap 1) zarejestrował komendę bez `--directory` ani `cwd`. Dopóki `mcp_server.py` nie importował żadnej zależności projektu (tylko `ping`), brak właściwego środowiska był niewidoczny — awaria ujawniła się dopiero, gdy `storage.py` zaczął importować `pyyaml`.
+
+**Jak działa:** Claude Desktop odpala podproces z jakiegoś swojego katalogu roboczego, nie z katalogu projektu. `uv run --frozen` bez wskazanego katalogu nie znajduje `pyproject.toml`/`uv.lock` projektu w cwd i — zamiast jawnego błędu — cicho ląduje na innym `mcp` znalezionym na `PATH` (tu: instalacja spod `pyenv`, bez `pyyaml`). `--directory` wymusza kontekst projektu niezależnie od katalogu roboczego procesu wywołującego.
+
+**Pułapki:** diagnoza myląca — ręczne odtworzenie dokładnie tej samej komendy z terminala (z katalogu projektu) działało bez zarzutu, co maskowało błąd; dopiero uruchomienie z innego katalogu roboczego (`cd ~`) odtworzyło awarię jeden do jednego. Realny traceback z Desktop → Developer → Local MCP servers → „View Logs" był kluczowy do znalezienia przyczyny — bez niego to samo zgadywanie.

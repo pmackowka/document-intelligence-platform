@@ -56,19 +56,9 @@ Dokument z nieczytelnym OCR (za mało wyciągniętego tekstu) nie wejdzie do wyn
 
 Version 2 udostępnia te same dane przez protokół MCP — Claude Desktop (i inni świadomie skonfigurowani klienci MCP) mogą pytać o trendy i porównania bez dostępu do plików, tak jak dotąd wyłącznie Claude Code w terminalu.
 
-**Zapytanie w Claude Desktop:**
-> porównaj moje wyniki hemoglobiny i OB w czasie
+Realne zapytanie w Claude Desktop — `compare_markers` wywołane bez żadnego ręcznego kroku pośredniego, dane z zaufanego magazynu:
 
-**Odpowiedź (`compare_markers`, dane realne z zaufanego magazynu):**
-
-| Data | HGB (g/dl) | Norma HGB | OB (mm/h) | Norma OB |
-|---|---|---|---|---|
-| 2020-12-21 | 14,1 | 13,7–17,5 | 10 | 2–12 |
-| 2023-01-23 | 14,9 | 13,7–17,5 | 3 | 2–12 |
-| 2026-04-20 | – | – | 9 | 2–12 |
-| 2026-07-21 | 14,2 | 13,5–18,0 | – | 2–12 |
-
-Oba markery w normie, bez niepokojącego trendu — HGB stabilne przez 6 lat, OB waha się w obrębie normy (wrażliwe na infekcje/stan zapalny z ostatnich dni, więc pojedyncze odczyty nie mówią wiele bez kontekstu klinicznego).
+![Porównanie hemoglobiny i OB w czasie — odpowiedź Claude Desktop wywołująca compare_markers](docs/assets/v2-compare-markers-example.png)
 
 Narzędzie zwraca dwie w pełni niezależne serie (bez łączenia po dacie — różne markery bywają badane różnego dnia); to model po stronie odpowiedzi złożył je w jedną czytelną tabelę.
 

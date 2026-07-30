@@ -13,7 +13,7 @@ To fundament pod etap 3 (właściwe narzędzia `get_marker_trend`, `compare_mark
 - [x] `src/storage.py`: `group_by_unit(records)` — reużycie logiki `real_units`/`sub_groups` z `report.py` jako samodzielna funkcja; `report.py` zaimportowany zamiast trzymać duplikat inline. Zweryfikowane na `HGB` (jedna jednostka, scalone) i `NEU` (dwie realne jednostki `%`/`tys/µl` + rekordy bez jednostki w osobnej grupie), oraz pełnym `build_report()` bez zapisu na dysk
 - [x] `report.py` zrefaktoryzowany: importuje `load_records`, `load_labels`, `group_by_unit` z `storage.py` — żadnej duplikowanej logiki domenowej nie zostało, tylko formatowanie specyficzne dla raportu (`fmt_value`, `fmt_range`, `flag`, `trend_arrow`, `build_report`)
 - [x] Testy jednostkowe czystej logiki (PRD, warstwa 1 z 3 weryfikacji przed produkcją): `tests/test_storage.py`, `pytest` jako dev-dependency — identyfikacja po kodzie, po etykiecie (oba case-insensitive), nieznany identyfikator z podpowiedzią i bez; grupowanie po jednostce (jedna jednostka, wiele jednostek). 8 testów, literały syntetyczne, niezależne od realnych plików — wszystkie przechodzą
-- [ ] Regresja: raport wygenerowany po refaktoryzacji identyczny z raportem sprzed zmiany, na tym samym zaufanym magazynie
+- [x] Regresja: `report.py` sprzed refaktoryzacji (`git show a11fc8a:src/report.py`) i wersja bieżąca uruchomione w pamięci na tym samym zaufanym magazynie (260 rekordów) — wygenerowany tekst raportu identyczny znak w znak (30865 znaków). Bez zapisu do `data/reports/` w trakcie testu — porównanie przez bezpośrednie wywołanie `build_report()`, nie przez `main()`
 
 ## Notatki
 
@@ -44,5 +44,15 @@ To fundament pod etap 3 (właściwe narzędzia `get_marker_trend`, `compare_mark
 **Dlaczego:** PRD V2 wymaga, żeby `get_marker_trend`/`compare_markers` (etap 3) zwracały serie markera pogrupowane po jednostce dokładnie tą samą regułą co dziś raport — bez wydzielenia funkcja musiałaby powstać drugi raz w `mcp_server.py`.
 
 **Jak działa:** licząc unikalne, niepuste jednostki w rekordach markera — przy ≤1 realnej jednostce wszystkie rekordy (w tym te bez jednostki) trafiają do jednej grupy; przy ≥2 realnych jednostkach (np. NEU w `%` i `tys/µl`) rekordy dzielą się dokładnie po swojej jednostce, a te bez jednostki lądują w osobnej grupie z kluczem `None` zamiast zgadywania, do której skali należą.
+
+### Regresja raportu bez dotykania `data/reports/`
+
+**Decyzja:** porównanie „przed/po" zrobione przez dynamiczny import starej wersji `report.py` (`git show <commit>:src/report.py` do pliku w scratchpadzie, `importlib.util.spec_from_file_location`) i wywołanie `build_report()` obu wersji w pamięci na tych samych danych — zero uruchomienia `main()`, zero zapisu na dysk.
+
+**Dlaczego:** `main()` zapisuje zawsze pod `data/reports/YYYY-MM-DD-trendy.md`, niezależnie od źródła — dokładnie ten mechanizm, który realnie nadpisał raport w incydencie opisanym w `CLAUDE.md` projektu. Regresja nie potrzebowała w ogóle dotykać tej ścieżki, więc ryzyko zniknęło przez wybór metody, nie przez ostrożność w jej użyciu.
+
+**Jak działa:** stara wersja modułu, załadowana z pliku spoza `src/`, liczy swoje `ROOT`/`STORE` z `Path(__file__)` — a `__file__` wskazuje wtedy na scratchpad, nie na projekt. Sam atrybut modułu (`report_before.STORE`) da się podmienić po załadowaniu, ale **domyślna wartość argumentu** funkcji (`store_path: Path = STORE`) jest wiązana raz, w momencie zdefiniowania funkcji — podmiana atrybutu modułu już na nią nie działa. Rozwiązanie: przekazać poprawną ścieżkę jawnie jako argument (`load_records(STORE)`), zamiast polegać na wartości domyślnej.
+
+**Pułapki:** `load_labels()` w starej wersji odczytuje `LABELS` jako zmienną globalną wewnątrz ciała funkcji (nie jako argument domyślny) — tam podmiana atrybutu modułu po załadowaniu zadziałała od razu. Dwie pozornie identyczne konstrukcje (argument domyślny vs odczyt globala w ciele funkcji) zachowują się różnie wobec podmiany atrybutu modułu po fakcie — różnica, która ujawniła się dopiero przy pierwszym uruchomieniu (0 rekordów zamiast 260), nie przy czytaniu kodu.
 
 **Pułapki:** żadnych nowych — to dosłowne przeniesienie istniejącej, już sprawdzonej logiki (V1, `03-storage-analysis.md`), nie nowa reguła biznesowa.

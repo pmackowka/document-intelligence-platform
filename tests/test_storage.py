@@ -43,6 +43,36 @@ def test_resolve_marker_unknown_raises_without_suggestion():
     assert exc_info.value.suggestions == []
 
 
+# Etykiety krótkiego skrótu przed nawiasem — regres realnego bugu: "OB" (przykład
+# z PRD, S2) nie pasował ani do kodu (ESR), ani do difflib (2 znaki vs 24-znakowa
+# etykieta, zbyt duża różnica długości dla cutoff=0.6).
+PREFIX_LABELS = {
+    "ESR": "OB (odczyn Biernackiego)",
+    "PTH": "PTH (parathormon)",
+    "PTH_1_84": "PTH (1-84)",
+}
+
+
+def test_resolve_marker_by_bracket_prefix():
+    assert resolve_marker("OB", PREFIX_LABELS) == "ESR"
+
+
+def test_resolve_marker_by_bracket_prefix_case_insensitive():
+    assert resolve_marker("ob", PREFIX_LABELS) == "ESR"
+
+
+def test_resolve_marker_code_wins_over_ambiguous_prefix():
+    # "PTH" to kod markera PTH — mimo że etykieta PTH_1_84 dałaby ten sam prefiks "pth",
+    # dokładne dopasowanie kodu ma pierwszeństwo, więc nie ma tu niejednoznaczności
+    assert resolve_marker("PTH", PREFIX_LABELS) == "PTH"
+
+
+def test_resolve_marker_ambiguous_prefix_not_silently_guessed():
+    # "PTH (1-84)" dałoby prefiks "pth", który koliduje z kodem innego markera (PTH) —
+    # ten prefiks nie powinien trafić do aliasów; PTH_1_84 wciąż rozpoznawalny po kodzie
+    assert resolve_marker("PTH_1_84", PREFIX_LABELS) == "PTH_1_84"
+
+
 def test_group_by_unit_single_real_unit_merges_missing_unit():
     records = [
         {"unit": "g/dl", "value": 13.5},

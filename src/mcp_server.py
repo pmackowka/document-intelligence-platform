@@ -26,5 +26,25 @@ def get_marker_trend(identyfikator: str) -> dict:
     return {"status": "ok", "marker": code, "series": series}
 
 
+@mcp.tool()
+def compare_markers(identyfikatory: list[str]) -> dict:
+    """Zwraca serie pomiarów dla wielu markerów naraz (kody kanoniczne lub polskie
+    etykiety) — N niezależnych serii, świadomie bez łączenia po dacie badania
+    (różne markery mogą mieć różne daty pomiarów; nie zgadujemy, które sobie
+    odpowiadają). Ta sama logika identyfikacji i grupowania po jednostce co
+    get_marker_trend, zastosowana do każdego identyfikatora z osobna."""
+    records = load_records()
+    results = []
+    for identyfikator in identyfikatory:
+        try:
+            code = resolve_marker(identyfikator)
+        except MarkerNotFound as e:
+            results.append({"status": "not_found", "identifier": identyfikator, "suggestions": e.suggestions})
+            continue
+        series = marker_series(code, records)
+        results.append({"status": "ok", "identifier": identyfikator, "marker": code, "series": series})
+    return {"results": results}
+
+
 if __name__ == "__main__":
     mcp.run()

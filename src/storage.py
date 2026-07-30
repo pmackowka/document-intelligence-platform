@@ -39,8 +39,30 @@ class MarkerNotFound(Exception):
         super().__init__(f"Nieznany marker: {identifier!r}.{hint}")
 
 
+def _prefix_aliases(labels: dict[str, str], code_by_lower: dict[str, str]) -> dict[str, str]:
+    """Skrót przed nawiasem w etykiecie (np. "OB (odczyn Biernackiego)" -> "ob") jako
+    dodatkowy alias — dla skrótów, które są krótsze niż cała etykieta i przez to
+    zbyt odległe dla dopasowania rozmytego (difflib porównuje długości całych ciągów).
+    Prefiks pomijany, jeśli koliduje z kodem innego markera — nie zgadujemy, o który
+    marker chodziło (np. "PTH (1-84)" dałoby prefiks "pth", który już jest kodem
+    markera "PTH" — inna etykieta, "PTH (parathormon)")."""
+    prefix_by_lower: dict[str, str] = {}
+    ambiguous: set[str] = set()
+    for code, label in labels.items():
+        if " (" not in label:
+            continue
+        prefix = label.split(" (", 1)[0].strip().lower()
+        existing = prefix_by_lower.get(prefix) or code_by_lower.get(prefix)
+        if existing and existing != code:
+            ambiguous.add(prefix)
+        else:
+            prefix_by_lower[prefix] = code
+    return {k: v for k, v in prefix_by_lower.items() if k not in ambiguous}
+
+
 def resolve_marker(identifier: str, labels: dict[str, str] | None = None) -> str:
-    """Zwraca kanoniczny kod markera dla podanego kodu lub polskiej etykiety (marker_labels.yml).
+    """Zwraca kanoniczny kod markera dla podanego kodu, polskiej etykiety (marker_labels.yml)
+    lub skrótu przed nawiasem w etykiecie (np. "OB" dla "OB (odczyn Biernackiego)").
 
     Dopasowanie bez rozróżniania wielkości liter. Nierozpoznany identyfikator rzuca
     MarkerNotFound z podpowiedzią najbliższych dopasowań — nigdy cicha pusta lista,
@@ -52,13 +74,16 @@ def resolve_marker(identifier: str, labels: dict[str, str] | None = None) -> str
     query_lower = (identifier or "").strip().lower()
     code_by_lower = {code.lower(): code for code in labels}
     label_by_lower = {label.strip().lower(): code for code, label in labels.items()}
+    prefix_by_lower = _prefix_aliases(labels, code_by_lower)
 
     if query_lower in code_by_lower:
         return code_by_lower[query_lower]
     if query_lower in label_by_lower:
         return label_by_lower[query_lower]
+    if query_lower in prefix_by_lower:
+        return prefix_by_lower[query_lower]
 
-    candidates = {**code_by_lower, **label_by_lower}
+    candidates = {**code_by_lower, **label_by_lower, **prefix_by_lower}
     close = get_close_matches(query_lower, candidates.keys(), n=3, cutoff=0.6)
     suggestions = sorted({candidates[c] for c in close})
     raise MarkerNotFound(identifier, suggestions)

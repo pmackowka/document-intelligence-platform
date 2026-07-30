@@ -18,7 +18,7 @@ from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
-from storage import ROOT, STORE, load_labels, load_records
+from storage import ROOT, STORE, group_by_unit, load_labels, load_records
 
 REPORTS = ROOT / "data" / "reports"
 
@@ -103,18 +103,7 @@ def build_report(records: list[dict], labels: dict) -> str:
         marker_rows = by_panel[panel]
         for marker in sorted(marker_rows, key=lambda m: labels.get(m, m)):
             rows = marker_rows[marker]
-            # Ta sama seria bywa ma jednostkę tylko w części dokumentów (parser jej tam nie
-            # znalazł) — dopóki dla markera istnieje TYLKO JEDNA realna (niepusta) jednostka,
-            # scalamy rekordy bez jednostki do niej zamiast rozbijać trend na kilka tabel.
-            # Gdy realnych jednostek jest >=2 (np. NEU w % i w tys/µl — różne skale), zostają
-            # rozdzielone jak dotąd — nie zgadujemy, do której skali należy brakująca jednostka.
-            real_units = {r["unit"] for r in rows if r["unit"]}
-            if len(real_units) <= 1:
-                sub_groups = {next(iter(real_units), None): rows}
-            else:
-                sub_groups = defaultdict(list)
-                for r in rows:
-                    sub_groups[r["unit"]].append(r)
+            sub_groups = group_by_unit(rows)
             for unit, sub_rows in sorted(sub_groups.items(), key=lambda kv: kv[0] or ""):
                 sub_rows = sorted(sub_rows, key=lambda r: r["exam_date"] or "")
                 label = labels.get(marker, marker)

@@ -36,3 +36,13 @@ To fundament pod etap 3 (właściwe narzędzia `get_marker_trend`, `compare_mark
 **Jak działa:** funkcja buduje dwa zlowercase'owane słowniki (kod→kod, etykieta→kod), sprawdza dokładne dopasowanie w obu; przy braku trafienia woła `difflib.get_close_matches` (cutoff 0.6) na sumie kluczy z obu słowników i zwraca kody odpowiadające najbliższym dopasowaniom.
 
 **Pułapki:** przed napisaniem fuzzy-matchingu sprawdzone programowo, że w `marker_labels.yml` (107 kodów) nie ma kolizji — żadna etykieta nie powtarza się dla dwóch różnych kodów, żaden kod nie jest jednocześnie cudzą etykietą poza samo-etykietowaniem (`MCV`→„MCV" itd.). Bez tej weryfikacji odwrotne mapowanie mogłoby cicho zgubić jeden z kodów przy kolizji kluczy.
+
+### `group_by_unit` — grupowanie po jednostce
+
+**Decyzja:** logika `real_units`/`sub_groups`, dotąd inline w pętli `build_report`, wydzielona jako samodzielna funkcja `group_by_unit(records)` w `storage.py`; `report.py` woła ją zamiast trzymać kopię.
+
+**Dlaczego:** PRD V2 wymaga, żeby `get_marker_trend`/`compare_markers` (etap 3) zwracały serie markera pogrupowane po jednostce dokładnie tą samą regułą co dziś raport — bez wydzielenia funkcja musiałaby powstać drugi raz w `mcp_server.py`.
+
+**Jak działa:** licząc unikalne, niepuste jednostki w rekordach markera — przy ≤1 realnej jednostce wszystkie rekordy (w tym te bez jednostki) trafiają do jednej grupy; przy ≥2 realnych jednostkach (np. NEU w `%` i `tys/µl`) rekordy dzielą się dokładnie po swojej jednostce, a te bez jednostki lądują w osobnej grupie z kluczem `None` zamiast zgadywania, do której skali należą.
+
+**Pułapki:** żadnych nowych — to dosłowne przeniesienie istniejącej, już sprawdzonej logiki (V1, `03-storage-analysis.md`), nie nowa reguła biznesowa.

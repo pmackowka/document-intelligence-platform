@@ -13,17 +13,13 @@ inaczej ta sama seria rozpadała się na kilka osobnych tabel bez powodu klinicz
 """
 from __future__ import annotations
 
-import json
 import sys
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
-import yaml
+from storage import ROOT, STORE, load_labels, load_records
 
-ROOT = Path(__file__).resolve().parent.parent
-STORE = ROOT / "data" / "store" / "structural-backfill.ndjson"
-LABELS = ROOT / "config" / "marker_labels.yml"
 REPORTS = ROOT / "data" / "reports"
 
 # Nazwy paneli do nagłówków raportu — kody wewnętrzne (aliases.yml) -> czytelna polska nazwa.
@@ -39,18 +35,6 @@ PANEL_LABELS = {
     "serologia_hbv": "Serologia HBV",
     "serologia_hcv": "Serologia HCV",
 }
-
-
-def load_records(store_path: Path = STORE) -> list[dict]:
-    if not store_path.exists():
-        return []
-    with store_path.open(encoding="utf-8") as fh:
-        return [json.loads(line) for line in fh if line.strip()]
-
-
-def load_labels() -> dict:
-    data = yaml.safe_load(LABELS.read_text(encoding="utf-8")) if LABELS.exists() else {}
-    return (data or {}).get("labels", {})
 
 
 def fmt_value(r: dict, group_unit: str | None = None) -> str:

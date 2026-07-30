@@ -71,6 +71,6 @@ Etap skończony = wszystkie checkboxy odhaczone lub świadomie skreślone z adno
 
 ## Out of scope V1 (nie implementuj bez zmiany PRD)
 
-Domeny inne niż medyczna; przetwarzanie dokumentów narracyjnych (USG/MRI/TK/kolonoskopia); orkiestracja przez n8n (usunięta w PRD v1.2 — uruchamianie ręczne z terminala); UI/dashboard/wykresy; automatyczny load do BigQuery; dziennik interwencji/stylu życia; RAG, wektorowe bazy, FastAPI/Docker/Cloud Run, MCP server, agenci (to wersje V2–V4 z zarysu).
+Domeny inne niż medyczna; przetwarzanie dokumentów narracyjnych (USG/MRI/TK/kolonoskopia); orkiestracja przez n8n (usunięta w PRD v1.2 — uruchamianie ręczne z terminala); UI/dashboard/wykresy; automatyczny load do BigQuery; dziennik interwencji/stylu życia; FastAPI/Docker/Cloud Run, MCP server, agenci (to wersje V2–V4 z zarysu).
 
 Jeśli przy okazji innej pracy natkniesz się na plik, fragment kodu lub dokumentu dotyczący **wyłącznie** przetwarzania danych narracyjnych — zgłoś operatorowi do potwierdzenia, nie usuwaj automatycznie. Nie skanuj repo proaktywnie w tym celu, tylko przy okazji.

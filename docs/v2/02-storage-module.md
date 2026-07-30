@@ -17,4 +17,22 @@ To fundament pod etap 3 (właściwe narzędzia `get_marker_trend`, `compare_mark
 
 ## Notatki
 
-_(puste — notatki powstają w trakcie realizacji powyższych kroków, nie z góry)_
+### Wydzielenie `load_records` i `load_labels` do `storage.py`
+
+**Decyzja:** obie funkcje przeniesione z `report.py` do `src/storage.py` bez zmiany logiki; `report.py` importuje je stamtąd zamiast trzymać własne kopie.
+
+**Dlaczego:** PRD V2 (Tech Constraints, „Reużycie kodu") wymaga, żeby serwer MCP nie importował ze skryptu CLI — a `report.py` i przyszły `mcp_server.py` potrzebują dokładnie tej samej logiki odczytu magazynu i etykiet, więc musi żyć w jednym wspólnym miejscu.
+
+**Jak działa:** `from storage import ...` działa bez pakietu czy `__init__.py`, bo Python przy uruchomieniu skryptu dodaje katalog tego skryptu (`src/`) do `sys.path[0]` — ten sam mechanizm, którego `structural_pipeline.py` już używa (`from ocr import ocr_markdown`).
+
+**Pułapki:** weryfikacja zrobiona przez bezpośrednie wywołanie `load_records()`/`load_labels()`, nie przez `main()` z `report.py` — `main()` zapisuje raport do `data/reports/YYYY-MM-DD-trendy.md` i mogłoby nadpisać istniejący plik z tego dnia (realny incydent opisany w `CLAUDE.md` projektu). Pełna regresja przez porównanie wygenerowanych raportów to osobny, celowo odłożony checkbox — wymaga świadomej zgody przed uruchomieniem `report.py`.
+
+### `resolve_marker` — rozpoznawanie po kodzie lub etykiecie
+
+**Decyzja:** dopasowanie bez rozróżniania wielkości liter do kodu kanonicznego LUB polskiej etykiety z `marker_labels.yml` (mapowanie odwrotne do istniejącego kod→etykieta); przy braku dopasowania — `MarkerNotFound` z podpowiedzią najbliższych dopasowań (`difflib.get_close_matches`), nigdy cicha pusta lista.
+
+**Dlaczego:** PRD wprost nazywa ryzyko mylenia literówki z brakiem danych — model wywołujący narzędzie MCP może podać zarówno kod (`HGB`), jak i polską nazwę (`Hemoglobina`), i oba muszą się rozstrzygać spójnie, z jawnym błędem zamiast domysłu.
+
+**Jak działa:** funkcja buduje dwa zlowercase'owane słowniki (kod→kod, etykieta→kod), sprawdza dokładne dopasowanie w obu; przy braku trafienia woła `difflib.get_close_matches` (cutoff 0.6) na sumie kluczy z obu słowników i zwraca kody odpowiadające najbliższym dopasowaniom.
+
+**Pułapki:** przed napisaniem fuzzy-matchingu sprawdzone programowo, że w `marker_labels.yml` (107 kodów) nie ma kolizji — żadna etykieta nie powtarza się dla dwóch różnych kodów, żaden kod nie jest jednocześnie cudzą etykietą poza samo-etykietowaniem (`MCV`→„MCV" itd.). Bez tej weryfikacji odwrotne mapowanie mogłoby cicho zgubić jeden z kodów przy kolizji kluczy.

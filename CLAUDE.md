@@ -4,9 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Stan projektu
 
-Faza przed implementacją — repozytorium zawiera na razie wyłącznie dokumentację. **`docs/v1/prd.md` jest kontraktem: każdą sesję zaczynaj od jego przeczytania i działaj zgodnie z nim.** Każda zmiana zakresu wymaga aktualizacji `docs/v1/prd.md`, nie tylko kodu. `docs/roadmap.md` to backlog wersji V2–V5 — nie implementuj z niego niczego w ramach V1.
+**V1** (OCR → standaryzacja → magazyn NDJSON → raporty Markdown) — w pełni zaimplementowana i zamknięta. Kontrakt: `docs/v1/prd.md` (status „zatwierdzony"), etapy `00`–`04`, wszystkie checkboxy odhaczone.
 
-Dokumentacja etapowa żyje płasko pod `docs/<wersja>/` (`docs/v1/`, `docs/v2/`, ...) — każda wersja ma własny `prd.md` i pliki etapów `00`–`NN` bezpośrednio w tym folderze (bez pośredniego podfolderu `stages/` — za dużo klikania), zgodnie z regułą z `docs/roadmap.md` („każda wersja przed startem przechodzi własną sesję sokratejską i dostaje własny PRD"). `docs/v2/` istnieje na razie wyłącznie jako szkielet (`docs/v2/00-planning.md`) — sesja sokratejska i PRD V2 jeszcze się nie odbyły; sekcja „Praca etapami" poniżej opisuje workflow `docs/v1/`, bo to jedyny etap aktualnie w toku.
+**V2** (serwer MCP nad tym samym magazynem — `get_marker_trend`, `compare_markers`, transport stdio) — w pełni zaimplementowana i zamknięta. Kontrakt: `docs/v2/prd.md` (status „zatwierdzony"), etapy `00`–`03`, wszystkie checkboxy odhaczone.
+
+**V3** (przeniesienie do chmury) — świadomie pominięta na razie: operator nie chce ponosić kosztów GCP Cloud Run ani VPS. Decyzja i uzasadnienie: `docs/roadmap.md`, sekcja „Zasada kolejności". Backlog, nie usunięta z roadmapy — do podjęcia, gdy pojawi się uzasadnienie kosztowe/produktowe.
+
+**V4** (architektura agentowa nad serwerem MCP z V2, bez przechodzenia przez V3) — w fazie planowania: sesja sokratejska w toku, PRD jeszcze nie istnieje. `docs/v4/00-planning.md`.
+
+**Kontrakt dla bieżącej pracy to PRD wersji aktualnie w implementacji** — sprawdź, który plik `docs/<wersja>/prd.md` ma status „zatwierdzony" i brakujące checkboxy w etapach; to on obowiązuje, nie z automatu `docs/v1/prd.md`. Każda zmiana zakresu wymaga aktualizacji odpowiedniego `prd.md`, nie tylko kodu. `docs/roadmap.md` to backlog strategiczny — nie implementuj z niego niczego poza kontraktem wersji aktualnie w toku.
+
+Dokumentacja etapowa żyje płasko pod `docs/<wersja>/` (`docs/v1/`, `docs/v2/`, `docs/v4/`, ...) — każda wersja ma własny `prd.md` i pliki etapów `00`–`NN` bezpośrednio w tym folderze (bez pośredniego podfolderu `stages/` — za dużo klikania), zgodnie z regułą z `docs/roadmap.md` („każda wersja przed startem przechodzi własną sesję sokratejską i dostaje własny PRD"). Workflow etapowy (checkboxy, struktura Notatek) opisany w sekcji „Praca etapami" niżej obowiązuje identycznie we wszystkich wersjach, nie tylko w `docs/v1/`, gdzie powstał.
 
 ## Czym jest ten projekt
 
@@ -48,13 +56,13 @@ Zasady przekrojowe:
 - Kod i nazwy po angielsku, komentarze i docstringi po polsku.
 - Diagramy Mermaid: etykiety węzłów zawsze w cudzysłowach (`A["..."]`), bez znaku `"` w treści etykiet — pełne reguły i historia incydentu na końcu `docs/roadmap.md`.
 
-## Praca etapami — `docs/v1/`
+## Praca etapami
 
-Implementacja podzielona na etapy `00`–`04`; każdy plik w `docs/v1/` ma sekcje: **Cel**, **Zakres / Definition of Done** (checkboxy = kroki) i **Notatki**. Kolejność plików = kolejność pracy.
+Implementacja każdej wersji dzieli się na etapy `00`–`NN`; każdy plik w `docs/<wersja>/` ma sekcje: **Cel**, **Zakres / Definition of Done** (checkboxy = kroki) i **Notatki**. Kolejność plików = kolejność pracy. Ten sam workflow obowiązywał już w `docs/v1/` (etapy `00`–`04`) i `docs/v2/` (etapy `00`–`03`) — nie jest specyficzny dla jednej wersji.
 
 **Workflow obowiązkowy w każdej sesji implementacyjnej:**
 
-1. Na starcie ustal bieżący etap: pierwszy plik w `docs/v1/` z nieodhaczonymi checkboxami. Przeczytaj go przed rozpoczęciem pracy.
+1. Na starcie ustal bieżącą wersję i etap: wersja z niezatwierdzonym PRD albo z pierwszym plikiem etapu mającym nieodhaczone checkboxy. Przeczytaj go przed rozpoczęciem pracy.
 2. **Natychmiast po wykonaniu akcji z checkboxa odhacz go** (z krótkim konkretem co zrobiono — bez dat i numerów commitów, chronologię trzyma git) — nie na końcu sesji, nie „w domyśle". Deklaracja w czacie, że coś zrobiono, bez edycji pliku etapu = zadanie niewykonane.
 3. Wykonana praca spoza checkboxów, która domyka element etapu — dopisz jako nowy odhaczony checkbox.
 
@@ -62,10 +70,10 @@ Implementacja podzielona na etapy `00`–`04`; każdy plik w `docs/v1/` ma sekcj
 
 - **Grupuj po temacie, nie po dacie.** Każdy temat to nagłówek `### <czego dotyczy>` (zwykle krok z Zakresu lub użyte narzędzie), a pod nim samodzielna notatka do nauki.
 - Pod tematem układ: **Decyzja** (co ustalono) → **Dlaczego** (uzasadnienie, trade-offy) → **Jak działa** (mechanizm narzędzia pod spodem — sedno wartości edukacyjnej) → **Pułapki** (co zaskoczyło). Nie każdy temat wymaga wszystkich czterech. **Każdy podpunkt w osobnym akapicie** (pusta linia między nimi) — inaczej markdown skleja je w jeden blok i notatka jest nieczytelna.
-- **Etykiety akapitów to zbiór zamknięty: dokładnie `Decyzja` / `Dlaczego` / `Jak działa` / `Pułapki` (lub podzbiór).** Nie wymyślaj własnych etykiet (np. wiązanych z numerami DoD w stylu „Struktura przeżywa (punkt 3):") ani nie łącz dwóch w jedną („Jak działa / Pułapki:"). Ta sama struktura obowiązuje we **wszystkich** plikach `docs/v1/`; wzorzec = `docs/v1/00-setup.md`. Trzymaj ją stałą między sesjami — nie zmieniaj konwencji.
+- **Etykiety akapitów to zbiór zamknięty: dokładnie `Decyzja` / `Dlaczego` / `Jak działa` / `Pułapki` (lub podzbiór).** Nie wymyślaj własnych etykiet (np. wiązanych z numerami DoD w stylu „Struktura przeżywa (punkt 3):") ani nie łącz dwóch w jedną („Jak działa / Pułapki:"). Ta sama struktura obowiązuje we **wszystkich** plikach `docs/<wersja>/`, niezależnie od wersji; wzorzec = `docs/v1/00-setup.md`. Trzymaj ją stałą między sesjami — nie zmieniaj konwencji.
 - **Bez dat** — chronologię trzyma git; notatka ma być czytelnym wyjaśnieniem, nie changelogiem.
 - **Nie log czynności** („zrobiliśmy X, potem Y") — zapisuj tylko to, co nieoczywiste i użyteczne za miesiąc.
-- Nie powielaj treści PRD — zakres i wymagania żyją w `docs/v1/prd.md`.
+- Nie powielaj treści PRD — zakres i wymagania żyją w `docs/<wersja>/prd.md`.
 
 Etap skończony = wszystkie checkboxy odhaczone lub świadomie skreślone z adnotacją.
 

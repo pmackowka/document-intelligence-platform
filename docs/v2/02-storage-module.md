@@ -10,8 +10,8 @@ To fundament pod etap 3 (właściwe narzędzia `get_marker_trend`, `compare_mark
 
 - [x] `src/storage.py`: `load_records(store_path=STORE)` — przeniesione z `report.py`, bez zmiany logiki; `report.py` zaimportowany z `storage` zamiast trzymać własną kopię, zweryfikowane (`report.load_records is storage.load_records`, 260 rekordów odczytanych z zaufanego magazynu bez błędu)
 - [x] `src/storage.py`: `resolve_marker(identyfikator)` — rozpoznaje kod kanoniczny LUB polską etykietę (odwrotne mapowanie do `marker_labels.yml`, bez rozróżniania wielkości liter); nieznany identyfikator → `MarkerNotFound` z podpowiedzią najbliższych dopasowań (`difflib.get_close_matches`), nigdy cicha pusta lista. Przy okazji: `load_labels()` też przeniesione do `storage.py` (duplikat w `report.py` usunięty) — ta sama dana potrzebna obu
-- [ ] `src/storage.py`: grupowanie rekordów markera po jednostce — reużycie logiki `real_units`/`sub_groups` już istniejącej w `report.py`, jako samodzielna funkcja
-- [ ] `report.py` zrefaktoryzowany: importuje `load_records` (i pozostałą reużywalną logikę) z `storage.py` zamiast trzymać własną kopię
+- [x] `src/storage.py`: `group_by_unit(records)` — reużycie logiki `real_units`/`sub_groups` z `report.py` jako samodzielna funkcja; `report.py` zaimportowany zamiast trzymać duplikat inline. Zweryfikowane na `HGB` (jedna jednostka, scalone) i `NEU` (dwie realne jednostki `%`/`tys/µl` + rekordy bez jednostki w osobnej grupie), oraz pełnym `build_report()` bez zapisu na dysk
+- [x] `report.py` zrefaktoryzowany: importuje `load_records`, `load_labels`, `group_by_unit` z `storage.py` — żadnej duplikowanej logiki domenowej nie zostało, tylko formatowanie specyficzne dla raportu (`fmt_value`, `fmt_range`, `flag`, `trend_arrow`, `build_report`)
 - [ ] Testy jednostkowe czystej logiki (PRD, warstwa 1 z 3 weryfikacji przed produkcją): identyfikacja po kodzie, po etykiecie, nieznany identyfikator; grupowanie po jednostce (przypadek jednej jednostki i wielu jednostek)
 - [ ] Regresja: raport wygenerowany po refaktoryzacji identyczny z raportem sprzed zmiany, na tym samym zaufanym magazynie
 

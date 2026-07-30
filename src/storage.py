@@ -6,6 +6,7 @@ PRD V2, Tech Constraints, "Reużycie kodu".
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from difflib import get_close_matches
 from pathlib import Path
 
@@ -61,3 +62,22 @@ def resolve_marker(identifier: str, labels: dict[str, str] | None = None) -> str
     close = get_close_matches(query_lower, candidates.keys(), n=3, cutoff=0.6)
     suggestions = sorted({candidates[c] for c in close})
     raise MarkerNotFound(identifier, suggestions)
+
+
+def group_by_unit(records: list[dict]) -> dict[str | None, list[dict]]:
+    """Grupuje rekordy jednego markera po jednostce.
+
+    Rekordy bez jednostki (parser jej nie znalazł w konkretnym dokumencie) dołączają
+    do jedynej realnej (niepustej) jednostki, jeśli marker ma tylko jedną — inaczej
+    ta sama seria rozpadałaby się na kilka tabel bez powodu klinicznego. Gdy realnych
+    jednostek jest >=2 (różne skale pod tym samym kodem, np. NEU w % i w tys/µl),
+    rekordy bez jednostki zostają w osobnej grupie (klucz None) — nie zgadujemy,
+    do której skali należą.
+    """
+    real_units = {r["unit"] for r in records if r["unit"]}
+    if len(real_units) <= 1:
+        return {next(iter(real_units), None): records}
+    groups: dict[str | None, list[dict]] = defaultdict(list)
+    for r in records:
+        groups[r["unit"]].append(r)
+    return dict(groups)

@@ -46,7 +46,7 @@ Kroki do powtórzenia testu ręcznie:
 
 **Decyzja:** rejestracja przez `uv run mcp install src/mcp_server.py --name document-intelligence-platform` (komenda z `mcp[cli]`), nie ręczna edycja configu od zera — bo sama dopisuje poprawny wpis do configu Claude Desktop, w tym pełną ścieżkę do binarki `uv` (bez tego Desktop nie znalazłby komendy, bo odpala procesy poza `$PATH` terminala operatora). Wpis ląduje w `~/Library/Application Support/Claude/claude_desktop_config.json`, klucz `mcpServers.document-intelligence-platform`, z komendą `/opt/homebrew/bin/uv run --frozen --with mcp[cli] mcp run <ścieżka absolutna>` (`--frozen` = start z zamrożonego `uv.lock`, bez re-resolvowania zależności przy każdym uruchomieniu). Ten sam plik JSON jest współdzielony z resztą configu appki (Cowork, preferencje UI) — dopisanie klucza nie rusza reszty. Widoczność w UI: Settings → Developer → **Local MCP servers** (nie „Connectors" — to osobna lista, dla connectorów webowych/OAuth). Po zarejestrowaniu serwer jest od razu dostępny w rozmowie — toggle w „+" → Connectors jest domyślnie włączony, ręczne włączanie nie było potrzebne.
 
-Wpis, jaki `mcp install` faktycznie dopisał do `claude_desktop_config.json`:
+Docelowy, poprawny wpis w `claude_desktop_config.json` (`mcp install` sam dopisuje wszystko OPRÓCZ `--directory` — tę linię trzeba dodać ręcznie, patrz `docs/v2/03-mcp-tools.md`, notatka „Desktop nie widział nowych narzędzi"; `mcp install` nie ma opcji, która zrobiłaby to za nas — sprawdzone w źródle `mcp/cli/claude.py`, funkcja `update_claude_config`, `args = ["run", "--frozen"]` na sztywno, bez miejsca na katalog):
 
 ```jsonc
 "mcpServers": {
@@ -54,8 +54,10 @@ Wpis, jaki `mcp install` faktycznie dopisał do `claude_desktop_config.json`:
     "command": "/opt/homebrew/bin/uv",       // pełna ścieżka do binarki — Desktop nie zna $PATH terminala operatora
     "args": [
       "run",
-      "--frozen",                             // start z zamrożonego uv.lock, bez re-resolvowania zależności przy każdym uruchomieniu
-      "--with",
+      "--directory",
+      "/Users/p/Documents/dev/Document-Intelligence-Platform",  // BEZ TEGO: Desktop odpala proces spoza katalogu
+      "--frozen",                             // projektu, uv run --frozen nie znajduje pyproject.toml/uv.lock i cicho
+      "--with",                               // ląduje na innym mcp z PATH (np. pyenv) — ModuleNotFoundError: yaml
       "mcp[cli]",                             // dogrywa pakiet MCP do środowiska tego konkretnego wywołania
       "mcp",
       "run",
@@ -69,9 +71,10 @@ Kroki do powtórzenia podpięcia:
 
 1. Wejście do katalogu projektu (świeży terminal startuje w katalogu domowym, nie tutaj): `cd /Users/p/Documents/dev/Document-Intelligence-Platform`
 2. Rejestracja: `uv run mcp install src/mcp_server.py --name document-intelligence-platform`
-3. Pełny restart Claude Desktop (Cmd+Q, nie samo zamknięcie okna) — potrzebne 2-3 razy, serwer nie pojawił się po pierwszym.
-4. W międzyczasie system macOS wyświetlił popup z prośbą o zgodę na dostęp `uv` do folderu Dokumenty — zatwierdzony (realny blocker, patrz Pułapki).
-5. Weryfikacja: Settings → Developer → Local MCP servers → `document-intelligence-platform` widoczny ze statusem „running".
-6. Wywołanie narzędzia `ping` z czatu — odpowiedź `pong` potwierdzona, transport stdio działa end-to-end. Toggle w „+" → Connectors sprawdzony przy okazji: domyślnie już włączony, żadna dodatkowa akcja nie była potrzebna.
+3. **Ręcznie dopisać `--directory` do wygenerowanego wpisu** (`mcp install` tego nie robi — patrz wyżej): otworzyć `~/Library/Application Support/Claude/claude_desktop_config.json`, w `args` dodać `"--directory", "/Users/p/Documents/dev/Document-Intelligence-Platform"` zaraz po `"run"`. Pominięcie tego kroku odtwarza realny bug z etapu 3 (`ModuleNotFoundError: yaml` w logach Desktopa, tylko po restarcie) — patrz `docs/v2/03-mcp-tools.md`
+4. Pełny restart Claude Desktop (Cmd+Q, nie samo zamknięcie okna) — potrzebne 2-3 razy, serwer nie pojawił się po pierwszym.
+5. W międzyczasie system macOS wyświetlił popup z prośbą o zgodę na dostęp `uv` do folderu Dokumenty — zatwierdzony (realny blocker, patrz Pułapki).
+6. Weryfikacja: Settings → Developer → Local MCP servers → `document-intelligence-platform` widoczny ze statusem „running".
+7. Wywołanie narzędzia `ping` z czatu — odpowiedź `pong` potwierdzona, transport stdio działa end-to-end. Toggle w „+" → Connectors sprawdzony przy okazji: domyślnie już włączony, żadna dodatkowa akcja nie była potrzebna.
 
-**Pułapki:** macOS (TCC) blokuje procesowi `uv` cichy dostęp do `~/Documents` bez żadnego błędu w logach Desktopa — serwer po prostu nie pojawia się na żadnej z list, dopóki po którymś restarcie appki nie zatwierdzisz systemowego popupu o zgodę, co łatwo pomylić z błędem w konfiguracji czy appce zamiast z blokadą systemową.
+**Pułapki:** macOS (TCC) blokuje procesowi `uv` cichy dostęp do `~/Documents` bez żadnego błędu w logach Desktopa — serwer po prostu nie pojawia się na żadnej z list, dopóki po którymś restarcie appki nie zatwierdzisz systemowego popupu o zgodę, co łatwo pomylić z błędem w konfiguracji czy appce zamiast z blokadą systemową. Osobna, poważniejsza pułapka: `mcp install` nie ma opcji na `--directory` (sprawdzone w źródle biblioteki) — bez ręcznego kroku 3 ten sam brak środowiska projektu odtworzy się przy każdej przyszłej reinstalacji, cicho i bez ostrzeżenia w samym narzędziu.

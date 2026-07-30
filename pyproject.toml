@@ -5,6 +5,7 @@ description = "Lokalna platforma do przetwarzania dokumentacji medycznej z anali
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "claude-agent-sdk>=0.2.128",
     "docling>=2.113.0",
     "mcp[cli]>=1.28.1",
     "ocrmac>=1.0.1",

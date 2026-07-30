@@ -81,3 +81,37 @@ def group_by_unit(records: list[dict]) -> dict[str | None, list[dict]]:
     for r in records:
         groups[r["unit"]].append(r)
     return dict(groups)
+
+
+SERIES_FIELDS = (
+    "exam_date",
+    "value",
+    "value_text",
+    "unit",
+    "reference_low",
+    "reference_high",
+    "reference_note",
+    "source_file",
+)
+
+
+def marker_series(code: str, records: list[dict]) -> list[dict]:
+    """Zwraca serie już rozpoznanego kodu markera, pogrupowane po jednostce.
+
+    Wejściem jest pełny magazyn (`load_records()`) — funkcja sama filtruje po kodzie.
+    Wyjście to surowe rekordy (PRD V2: zero interpretacji — kierunek trendu, delta itd.
+    to rola modelu wywołującego narzędzie MCP, nie tej funkcji), posortowane po dacie
+    badania w obrębie każdej jednostki.
+    """
+    marker_records = [r for r in records if r["marker"] == code]
+    groups = group_by_unit(marker_records)
+    return [
+        {
+            "unit": unit,
+            "records": [
+                {field: r.get(field) for field in SERIES_FIELDS}
+                for r in sorted(rows, key=lambda r: r["exam_date"] or "")
+            ],
+        }
+        for unit, rows in sorted(groups.items(), key=lambda kv: kv[0] or "")
+    ]

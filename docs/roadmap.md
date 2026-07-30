@@ -8,6 +8,8 @@
 
 Każda wersja kończy się działającym produktem i nie wymaga przepisywania poprzednich modułów. Kolejność V2–V4 poniżej jest wstępna — do rewizji po V1 (patrz uwagi).
 
+> **Decyzja (po V2):** V3 (przeniesienie do chmury) świadomie pominięta na razie — operator nie chce ponosić kosztów utrzymania (GCP Cloud Run ani VPS, np. mikr.us). V4 (architektura agentowa) budowana bezpośrednio na V2, lokalnie — bez przechodzenia przez V3. Brak stwierdzonej zależności technicznej: agent z V4 działa lokalnie nad tym samym lokalnym serwerem MCP co dziś. V3 zostaje w backlogu, do podjęcia gdy pojawi się uzasadnienie kosztowe/produktowe dla hostingu zdalnego.
+
 ---
 
 ## Fundament — Version 1 (w realizacji)

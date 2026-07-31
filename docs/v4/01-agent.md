@@ -49,6 +49,16 @@ Najtrudniejsze niewiadome — czy framework w ogóle działa wyłącznie na subs
 
 **Pułapki:** żadna — obie odpowiedzi cytowały wyłącznie wartości faktycznie zwrócone przez narzędzia (widoczne w przechwyconym JSON-ie z warstwy 2 i w treści zapisanych raportów), bez halucynowanych liczb. Ryzyko z PRD („agent syntetyzuje wynik zawierający liczby nieoparte na realnych danych") nie zmaterializowało się w tych dwóch przebiegach, ale to dowód na próbce n=2, nie gwarancja na przyszłość.
 
+### Domknięcie ryzyka halucynacji — `CITATION_INSTRUCTION`
+
+**Decyzja:** dopisana jawna instrukcja do `system_prompt` (pole `append`) — `CITATION_INSTRUCTION` w `src/agent.py` — nakazująca cytować wyłącznie wartości/jednostki/daty faktycznie zwrócone przez `get_marker_trend`/`compare_markers`, bez generowania czy zgadywania liczb.
+
+**Dlaczego:** tabela Ryzyka w `prd.md` wprost wymagała tego jako elementu etapu 1, ale nigdy nie trafiło to do DoD tego pliku ani do kodu — S1/S2 potwierdziły brak halucynacji tylko obserwacyjnie (n=2), bez żadnego zabezpieczenia wymuszającego to zachowanie na przyszłość. Dowód empiryczny na małej próbce to za mało wobec ryzyka nazwanego wprost w PRD.
+
+**Jak działa:** `SystemPromptPreset.append` dokleja tekst do domyślnego promptu systemowego presetu `claude_code` (obok `exclude_dynamic_sections`, które go skraca) — to udokumentowane pole SDK, nie własny hack.
+
+**Pułapki:** to instrukcja w prompcie, nie twardy walidator kodu — model teoretycznie może ją zignorować. Nie re-uruchamiałem S1/S2 po tej zmianie (nieproszony o to, a to kolejne realne zużycie puli Pro) — dowód z poprzedniego przebiegu dotyczy configu *bez* tej instrukcji. Jeśli ma to być twarde zabezpieczenie, a nie tylko instrukcja w prompcie, docelowo wymagałoby post-hoc walidacji (parsowanie liczb z odpowiedzi i porównanie z JSON-em zwróconym przez narzędzia) — świadomie poza zakresem tej zmiany.
+
 ### Ręczne odtworzenie S1/S2 przez operatora
 
 **Decyzja:** oprócz automatycznej weryfikacji (wykonanej w tej sesji), operator uruchamia oba sign-offy sam w terminalu — human-in-the-loop nie kończy się na przeczytaniu wyniku w czacie, obejmuje też samodzielne odtworzenie.

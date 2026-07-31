@@ -79,5 +79,11 @@ def test_build_options_system_prompt_excludes_dynamic_sections():
     assert options.system_prompt == {
         "type": "preset",
         "preset": "claude_code",
+        "append": agent.CITATION_INSTRUCTION,
         "exclude_dynamic_sections": True,
     }
+
+
+def test_citation_instruction_mentions_both_tools():
+    assert "get_marker_trend" in agent.CITATION_INSTRUCTION
+    assert "compare_markers" in agent.CITATION_INSTRUCTION

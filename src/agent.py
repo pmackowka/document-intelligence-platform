@@ -25,6 +25,12 @@ _POLISH_DIACRITICS = str.maketrans(
     "acelnoszzACELNOSZZ",
 )
 
+CITATION_INSTRUCTION = (
+    "Przy syntezie odpowiedzi cytuj wyłącznie wartości, jednostki i daty faktycznie "
+    "zwrócone przez narzędzia get_marker_trend/compare_markers. Nie generuj, nie szacuj "
+    "ani nie zgaduj liczb, których narzędzia nie zwróciły."
+)
+
 
 def build_options() -> ClaudeAgentOptions:
     """Zwraca zawężoną konfigurację agenta V4.
@@ -35,7 +41,8 @@ def build_options() -> ClaudeAgentOptions:
     auto-zatwierdza dokładnie dwa z nich (bez tego jednorazowe wywołanie utyka na prośbie
     o uprawnienia — nikt nie może jej ręcznie zatwierdzić); `setting_sources=[]` pomija
     `CLAUDE.md`/ustawienia projektu; `system_prompt.exclude_dynamic_sections` usuwa
-    auto-memory z promptu systemowego.
+    auto-memory z promptu systemowego. `system_prompt.append` dokłada CITATION_INSTRUCTION
+    — mitygacja ryzyka halucynacji z PRD (Ryzyka), nieobecna w oryginalnym spike'u.
     """
     return ClaudeAgentOptions(
         tools=[],
@@ -54,6 +61,7 @@ def build_options() -> ClaudeAgentOptions:
         system_prompt={
             "type": "preset",
             "preset": "claude_code",
+            "append": CITATION_INSTRUCTION,
             "exclude_dynamic_sections": True,
         },
     )

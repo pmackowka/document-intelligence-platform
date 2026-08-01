@@ -90,12 +90,18 @@ def trend_arrow(values: list[float]) -> str:
     return " →"
 
 
-def build_report(records: list[dict], labels: dict) -> str:
+def build_report(records: list[dict], labels: dict, mode: str) -> str:
     by_panel: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
     for r in records:
         by_panel[r["panel"]][r["marker"]].append(r)
 
-    lines = [f"# Raport trendów — badania strukturalne", "", f"Wygenerowano: {date.today().isoformat()}", ""]
+    lines = [
+        f"# Raport trendów — badania strukturalne",
+        "",
+        f"Wygenerowano: {date.today().isoformat()}",
+        f"Tryb: {mode}",
+        "",
+    ]
 
     for panel in sorted(by_panel, key=lambda p: PANEL_LABELS.get(p, p)):
         lines.append(f"## {PANEL_LABELS.get(panel, panel)}")
@@ -130,7 +136,8 @@ def main() -> int:
         print(f"Brak rekordów w {store_path} — najpierw uruchom structural_pipeline.py")
         return 1
     labels = load_labels()
-    report = build_report(records, labels)
+    mode = "zaufany magazyn" if store_path == STORE else "KANDYDAT"
+    report = build_report(records, labels, mode)
 
     REPORTS.mkdir(parents=True, exist_ok=True)
     out = REPORTS / f"{date.today().isoformat()}-trendy.md"
@@ -138,7 +145,6 @@ def main() -> int:
 
     n_panels = len({r["panel"] for r in records})
     n_series = len({(r["panel"], r["marker"], r["unit"]) for r in records})
-    mode = "zaufany magazyn" if store_path == STORE else "KANDYDAT"
     print(f"Raport ({mode}, źródło: {store_path.name}): {len(records)} rekordów, {n_panels} paneli, {n_series} serii marker/jednostka -> {out}")
     return 0
 

@@ -81,6 +81,25 @@ flowchart TD
     S --> O["Raport na wizytę<br>+ pytania do lekarza"]
 ```
 
+## Version 5 — Prompts i Resources MCP (nadobowiązkowy)
+
+Serwer MCP z V2 wystawia wyłącznie Tools. V5 dokłada dwa pozostałe prymitywy protokołu na tym samym
+serwerze — nie nowa potrzeba produktowa, tylko nauka mechanizmu przez debugowanie w MCP Inspectorze.
+Pełny zakres: `docs/v5/prd.md`.
+
+- **Wartość**: zrozumienie różnicy Tool / Resource / Prompt na realnym, już zbudowanym serwerze.
+- **Kompetencje**: MCP (pogłębienie — pozostałe dwa prymitywy protokołu).
+
+```mermaid
+flowchart LR
+    C["Inspector / Claude Desktop"] --> S[MCP Server]
+    S --> R1["Resource: markers://catalog"]
+    S --> R2["Resource: report://latest"]
+    S --> P1["Prompt: porownaj_markery"]
+    R1 & R2 --> CTX[Kontekst rozmowy]
+    P1 --> MSG[Gotowy tekst zapytania]
+```
+
 ---
 
 ## Rozszerzenia domenowe (niezależne od wersji)

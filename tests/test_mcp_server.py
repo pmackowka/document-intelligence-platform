@@ -98,3 +98,44 @@ def test_compare_markers_mix_of_known_and_unknown(monkeypatch):
 
     statuses = [r["status"] for r in result["results"]]
     assert statuses == ["ok", "not_found"]
+
+
+# V5 — Resources i Prompts (docs/v5/prd.md). SAMPLE_LABELS syntetyczne, jak SAMPLE_RECORDS wyżej —
+# markers_catalog nie powinien zależeć od prywatnego, niewersjonowanego marker_labels.yml w testach.
+SAMPLE_LABELS = {"HGB": "Hemoglobina", "FERR": "Ferrytyna", "ESR": "OB (odczyn Biernackiego)"}
+
+
+def test_markers_catalog_lists_all_labels_sorted(monkeypatch):
+    monkeypatch.setattr(mcp_server, "load_labels", lambda: SAMPLE_LABELS)
+
+    result = mcp_server.markers_catalog()
+
+    assert result == "ESR: OB (odczyn Biernackiego)\nFERR: Ferrytyna\nHGB: Hemoglobina"
+
+
+def test_report_latest_returns_newest_file_content(monkeypatch, tmp_path):
+    report_file = tmp_path / "2026-07-31-trendy.md"
+    report_file.write_text("# Raport\n\nTryb: zaufany magazyn", encoding="utf-8")
+    monkeypatch.setattr(mcp_server, "latest_report", lambda: report_file)
+
+    assert mcp_server.report_latest() == "# Raport\n\nTryb: zaufany magazyn"
+
+
+def test_report_latest_empty_directory_returns_explicit_message(monkeypatch):
+    monkeypatch.setattr(mcp_server, "latest_report", lambda: None)
+
+    result = mcp_server.report_latest()
+
+    assert "Brak wygenerowanych raportów" in result
+
+
+def test_porownaj_markery_formats_template():
+    assert mcp_server.porownaj_markery("Hemoglobina", "OB") == \
+        "Porównaj moje wyniki Hemoglobina i OB w czasie."
+
+
+def test_porownaj_markery_handles_special_characters_in_identifier():
+    # Identyfikator ze skrótem w nawiasie (PRD, Threat Model) — prompt tylko formatuje
+    # tekst, nie rozpoznaje markera, więc dowolny string przechodzi bez zmian.
+    result = mcp_server.porownaj_markery("PTH (parathormon)", "Ca")
+    assert result == "Porównaj moje wyniki PTH (parathormon) i Ca w czasie."

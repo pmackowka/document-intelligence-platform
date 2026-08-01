@@ -10,7 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **V3** (przeniesienie do chmury) — świadomie pominięta na razie: operator nie chce ponosić kosztów GCP Cloud Run ani VPS. Decyzja i uzasadnienie: `docs/roadmap.md`, sekcja „Zasada kolejności". Backlog, nie usunięta z roadmapy — do podjęcia, gdy pojawi się uzasadnienie kosztowe/produktowe.
 
-**V4** (architektura agentowa nad serwerem MCP z V2, bez przechodzenia przez V3) — w fazie planowania: sesja sokratejska w toku, PRD jeszcze nie istnieje. `docs/v4/00-planning.md`.
+**V4** (architektura agentowa nad serwerem MCP z V2, bez przechodzenia przez V3 — jednorazowy agent `src/agent.py`, zawężony toolset, bez auto-memory) — w pełni zaimplementowana i zamknięta. Kontrakt: `docs/v4/prd.md` (status „zatwierdzony"), etap `01`, wszystkie checkboxy odhaczone, S1/S2 na realnych danych.
+
+**V5** (Prompts i Resources MCP nad tym samym serwerem z V2 — `markers://catalog`, `report://latest`, prompt `porownaj_markery`; nadobowiązkowy krok nauki mechaniki protokołu, nie luka produktowa) — w implementacji. Kontrakt: `docs/v5/prd.md` (status „zatwierdzony"), etap `01`.
 
 **Kontrakt dla bieżącej pracy to PRD wersji aktualnie w implementacji** — sprawdź, który plik `docs/<wersja>/prd.md` ma status „zatwierdzony" i brakujące checkboxy w etapach; to on obowiązuje, nie z automatu `docs/v1/prd.md`. Każda zmiana zakresu wymaga aktualizacji odpowiedniego `prd.md`, nie tylko kodu. `docs/roadmap.md` to backlog strategiczny — nie implementuj z niego niczego poza kontraktem wersji aktualnie w toku.
 

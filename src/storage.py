@@ -15,6 +15,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 STORE = ROOT / "data" / "store" / "structural-backfill.ndjson"
 LABELS = ROOT / "config" / "marker_labels.yml"
+REPORTS = ROOT / "data" / "reports"
 
 
 def load_records(store_path: Path = STORE) -> list[dict]:
@@ -27,6 +28,17 @@ def load_records(store_path: Path = STORE) -> list[dict]:
 def load_labels() -> dict[str, str]:
     data = yaml.safe_load(LABELS.read_text(encoding="utf-8")) if LABELS.exists() else {}
     return (data or {}).get("labels", {})
+
+
+def latest_report(reports_dir: Path = REPORTS) -> Path | None:
+    """Najnowszy raport wg nazwy pliku (`YYYY-MM-DD-trendy.md` — sortowanie leksykograficzne
+    == chronologiczne dzięki formatowi ISO). None, gdy katalog nie istnieje albo jest pusty —
+    wywołujący decyduje, jak to zakomunikować (nigdy cicha pustka bez wyjaśnienia, ta sama
+    zasada co przy MarkerNotFound)."""
+    if not reports_dir.exists():
+        return None
+    reports = sorted(reports_dir.glob("*.md"))
+    return reports[-1] if reports else None
 
 
 class MarkerNotFound(Exception):

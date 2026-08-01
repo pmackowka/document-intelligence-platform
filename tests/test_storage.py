@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from storage import MarkerNotFound, group_by_unit, resolve_marker
+from storage import MarkerNotFound, group_by_unit, latest_report, resolve_marker
 
 LABELS = {
     "HGB": "Hemoglobina",
@@ -99,3 +99,21 @@ def test_group_by_unit_multiple_real_units_splits_and_isolates_missing():
     assert len(groups["%"]) == 1
     assert len(groups["tys/µl"]) == 1
     assert len(groups[None]) == 1
+
+
+def test_latest_report_picks_newest_by_name(tmp_path):
+    (tmp_path / "2026-01-10-trendy.md").write_text("stary", encoding="utf-8")
+    (tmp_path / "2026-07-31-trendy.md").write_text("nowy", encoding="utf-8")
+
+    result = latest_report(tmp_path)
+
+    assert result.name == "2026-07-31-trendy.md"
+    assert result.read_text(encoding="utf-8") == "nowy"
+
+
+def test_latest_report_empty_directory_returns_none(tmp_path):
+    assert latest_report(tmp_path) is None
+
+
+def test_latest_report_missing_directory_returns_none(tmp_path):
+    assert latest_report(tmp_path / "nie-istnieje") is None

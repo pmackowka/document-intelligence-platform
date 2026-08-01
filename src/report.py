@@ -18,9 +18,7 @@ from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
-from storage import ROOT, STORE, group_by_unit, load_labels, load_records
-
-REPORTS = ROOT / "data" / "reports"
+from storage import REPORTS, STORE, group_by_unit, load_labels, load_records
 
 # Nazwy paneli do nagłówków raportu — kody wewnętrzne (aliases.yml) -> czytelna polska nazwa.
 PANEL_LABELS = {

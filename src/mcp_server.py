@@ -1,6 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 
-from storage import MarkerNotFound, load_records, marker_series, resolve_marker
+from storage import MarkerNotFound, latest_report, load_labels, load_records, marker_series, resolve_marker
 
 mcp = FastMCP("document-intelligence-platform")
 
@@ -44,6 +44,32 @@ def compare_markers(identyfikatory: list[str]) -> dict:
         series = marker_series(code, records)
         results.append({"status": "ok", "identifier": identyfikator, "marker": code, "series": series})
     return {"results": results}
+
+
+@mcp.resource("markers://catalog")
+def markers_catalog() -> str:
+    """Katalog kodów kanonicznych i polskich etykiet markerów (marker_labels.yml) — wyłącznie
+    metadane domenowe, zero wartości pomiarów, zero PII."""
+    labels = load_labels()
+    return "\n".join(f"{code}: {label}" for code, label in sorted(labels.items()))
+
+
+@mcp.resource("report://latest")
+def report_latest() -> str:
+    """Treść najnowszego raportu Markdown z data/reports/ (nagłówek pliku niesie tryb —
+    zaufany magazyn albo KANDYDAT). Jawny komunikat zamiast wyjątku, gdy folder jest pusty —
+    ta sama zasada "nigdy cicha pustka" co przy nierozpoznanym identyfikatorze markera."""
+    path = latest_report()
+    if path is None:
+        return "Brak wygenerowanych raportów w data/reports/ — najpierw uruchom report.py."
+    return path.read_text(encoding="utf-8")
+
+
+@mcp.prompt()
+def porownaj_markery(marker1: str, marker2: str) -> str:
+    """Gotowy szablon zapytania o porównanie dwóch markerów w czasie — zaszywa raz poprawnie
+    działającą frazę, zamiast wymagać, żeby operator pamiętał ją za każdym razem."""
+    return f"Porównaj moje wyniki {marker1} i {marker2} w czasie."
 
 
 if __name__ == "__main__":

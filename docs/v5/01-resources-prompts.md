@@ -70,3 +70,11 @@ rygor niż V2/V4.
 12. Sprawdzić, że w panelu „Messages" pojawił się dokładnie tekst: „Porównaj moje wyniki Hemoglobina i OB w czasie." (z kropką na końcu)
 
 **Pułapki:** krok 2 zawiesza terminal na czas działania Inspectora (proces pierwszoplanowy) — żeby korzystać z terminala w międzyczasie, otworzyć drugą kartę/okno terminala albo dopisać `&` na końcu komendy.
+
+### Weryfikacja w Claude Desktop — potwierdzona przez operatora (poza wymogiem PRD)
+
+**Decyzja:** operator potwierdził działanie wszystkich trzech elementów w Claude Desktop po restarcie appki — poza wymogiem tego PRD (Inspector wystarczał jako dowód), ale wartościowe, bo pokazuje realny klient docelowy, nie tylko narzędzie deweloperskie.
+
+**Jak działa:** Resources i Prompts NIE pojawiają się tam, gdzie Tools (toggle „document-intelligence-platform" + lista „Tool access") — mają własną pozycję w menu „+": „Add from document-intelligence-platform", obok „Add from Google Drive". W środku widoczne trzy pozycje z ikonami różnymi dla typu: dymek dla Prompta (`Porownaj markery`), dokument dla Resource (`Markers catalog`, `Report latest`). To bezpośrednie odzwierciedlenie różnicy w protokole: Tools wywołuje model sam w trakcie rozmowy (stąd toggle/uprawnienia), Resources i Prompts świadomie dołącza operator przed wysłaniem wiadomości (stąd osobny mechanizm „dodaj do wiadomości", nie przełącznik dostępności).
+
+**Pułapki:** nazwy wyświetlane w Desktopie są zhumanizowane automatycznie z nazw funkcji Pythona (`markers_catalog` → „Markers catalog", `porownaj_markery` → „Porownaj markery") — nigdzie w kodzie nie ustawialiśmy `name`/`title` jawnie; to domyślne zachowanie FastMCP/Desktopa, nie coś, co trzeba było skonfigurować.

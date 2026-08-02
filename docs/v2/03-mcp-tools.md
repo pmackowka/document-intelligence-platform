@@ -73,7 +73,7 @@ Kroki do powtórzenia:
 1. Pełny restart Claude Desktop (Cmd+Q, nie samo zamknięcie okna) — żeby podproces serwera podniósł się z aktualnym kodem (`get_marker_trend`, `compare_markers`)
 2. Nowa rozmowa w Desktopie
 3. (Opcjonalnie) „+" → Connectors → sprawdzić, że `document-intelligence-platform` ma toggle włączony (domyślnie tak, patrz etap 1)
-4. **S1:** wpisać zapytanie w naturalnym języku, np. „pokaż trend ferrytyny" — bez wskazywania narzędzia czy identyfikatora wprost. Oczekiwane: model sam wybiera `get_marker_trend`, odpowiedź zawiera realne wartości (np. `25.0 ng/ml`, data `2026-06-26`) zgodne z tym, co zwrócił Inspector
+4. **S1:** wpisać zapytanie w naturalnym języku, np. „pokaż trend ferrytyny" — bez wskazywania narzędzia czy identyfikatora wprost. Oczekiwane: model sam wybiera `get_marker_trend`, odpowiedź zawiera realne wartości (liczba + jednostka + data) zgodne z tym, co zwrócił Inspector
 5. **S2:** w tej samej lub nowej rozmowie wpisać, np. „porównaj hemoglobinę i OB" — oczekiwane: model wybiera `compare_markers`, odpowiedź referuje do dwóch niezależnych serii (HGB i ESR/OB) bez prób sztucznego łączenia ich po dacie
 6. Sign-off = potwierdzenie, że oba zapytania zadziałały **bez żadnego ręcznego kroku pośredniego** (bez podawania kodu markera, bez włączania narzędzia ręcznie, bez poprawek)
 

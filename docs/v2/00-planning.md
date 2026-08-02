@@ -4,7 +4,7 @@
 
 Domknąć fazę przedimplementacyjną Version 2 tym samym trybem, co V1: sesja sokratejska → PRD zatwierdzony → dopiero wtedy pierwszy etap implementacyjny. Ten plik **nie jest planem implementacji** — to jedyny etap, który istnieje, dopóki `docs/v2/prd.md` nie ma statusu „zatwierdzony".
 
-Zalążek zakresu (do zweryfikowania/rozszerzenia w sesji sokratejskiej, nie do traktowania jako ustalone): projekt staje się serwerem MCP udostępniającym znormalizowane dane medyczne klientom (Claude Code, Claude Desktop, inne klienty MCP) — narzędzia typu `get_marker_trend`, `compare_markers` zamiast ręcznego czytania plików NDJSON z dysku. Pełny opis i diagram: `docs/roadmap.md`, sekcja „Version 2 — MCP server".
+Zalążek zakresu (do zweryfikowania/rozszerzenia w sesji sokratejskiej, nie do traktowania jako ustalone): projekt staje się serwerem MCP udostępniającym znormalizowane dane medyczne klientom (Claude Code, Claude Desktop, inne klienty MCP) — narzędzia typu `get_marker_trend`, `compare_markers` zamiast ręcznego czytania plików NDJSON z dysku. Pełny, zatwierdzony zakres: `docs/v2/prd.md`. Diagram: `README.md`, sekcja „Architektura — mapa wersji".
 
 ## Zakres / Definition of Done
 

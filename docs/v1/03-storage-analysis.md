@@ -7,7 +7,7 @@ To nie budowa silnika zapytań. PRD świadomie nie przewiduje dedykowanego narz�
 
 ## Zakres / Definition of Done
 - [x] Kanoniczny NDJSON zwalidowany pod BigQuery — 114/114 rekordów to poprawny JSON z identycznym zestawem kluczy i spójnymi typami per pole (`value`/`reference_low`/`reference_high`: float|None; `unit`/`value_text`/`reference_note`: str|None; reszta: str). Rozszerzony do 12 kluczy (`reference_note`) po realnym loadzie — patrz Notatki
-- [x] Trend dowolnego markera jednym promptem — zademonstrowane z NDJSON (hemoglobina: 2020→2023, 14.1→14.9 g/dl). Formalny próg S2 (≥3 pomiary) niezweryfikowany na tym wolumenie (14 dok., 3 daty) — pomiar właściwy dla etapu 4
+- [x] Trend dowolnego markera jednym promptem — zademonstrowane z NDJSON (hemoglobina, dwie daty, rosnący trend w normie). Formalny próg S2 (≥3 pomiary) niezweryfikowany na tym wolumenie (14 dok., 3 daty) — pomiar właściwy dla etapu 4
 - [x] Porównanie dwóch markerów na osi czasu — zademonstrowane (hemoglobina vs OB)
 - [x] Ręczny load NDJSON do BigQuery bez błędów schematu (S4) — operator wykonał realny load przez konsolę GCP (11 kolumn), bez błędów. Schemat rozszerzony do 12 kolumn (`reference_note`) — instrukcja niżej
 - [x] Raport Markdown „do lekarza": trendy markerów — `src/report.py`, realny raport z 114 rekordów: 10 paneli, 72 serie, strzałki kierunku; `reference_note` zamiast „—" gdy brak czystego zakresu

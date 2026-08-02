@@ -5,7 +5,7 @@
 >
 > **v1.1 (2026-07-18):** ingest tylko ręczny — usunięty konektor Google Drive.
 >
-> **v1.2 (2026-07-21):** **n8n usunięty z V1.** Powód: architektoniczny rozjazd wykryty przy próbie realnego spięcia (etap 4) — n8n działa w kontenerze Docker (Linux), a silnik OCR to Apple Vision (natywny framework macOS, nie uruchomi się w kontenerze); do tego kontener nie ma dostępu do plików projektu. `Execute Command` z n8n fizycznie nie odpali pipeline'u. Orkiestracja w V1 = uruchomienie ręczne z terminala (`uv run python ...`), spójne z terminal-native charakterem projektu (zero UI). n8n jako narzędzie orkiestracji pozostaje kandydatem na przyszłość — patrz „Do rozważenia" w `docs/roadmap.md` (uruchomienie na VPS zamiast lokalnego Dockera obchodzi problem macOS/Apple Vision, o ile OCR zostanie tam zastąpiony silnikiem serwerowym).
+> **v1.2 (2026-07-21):** **n8n usunięty z V1.** Powód: architektoniczny rozjazd wykryty przy próbie realnego spięcia (etap 4) — n8n działa w kontenerze Docker (Linux), a silnik OCR to Apple Vision (natywny framework macOS, nie uruchomi się w kontenerze); do tego kontener nie ma dostępu do plików projektu. `Execute Command` z n8n fizycznie nie odpali pipeline'u. Orkiestracja w V1 = uruchomienie ręczne z terminala (`uv run python ...`), spójne z terminal-native charakterem projektu (zero UI). n8n jako narzędzie orkiestracji pozostaje kandydatem na przyszłość — patrz „Backlog" w `CLAUDE.md` (uruchomienie na VPS zamiast lokalnego Dockera obchodzi problem macOS/Apple Vision, o ile OCR zostanie tam zastąpiony silnikiem serwerowym).
 >
 > **v1.3 (2026-07-22):** **Magazyn: migawki datowane + scalenie ręczne, zamiast bezpośredniego nadpisania.** Powód: backfill ~40 dokumentów ujawnił cztery niezależne rundy błędów w tej samej partii (patrz `docs/v1/04-backfill.md`) — ryzyko, że przyszła poprawka regexa/aliasu przy okazji nowego dokumentu po cichu zmieni wartość w rekordzie już zweryfikowanym przez operatora, jest realne, bo pipeline zawsze przetwarza cały `data/raw/structural/` od zera. `structural_pipeline.py` zapisuje teraz każdy przebieg do osobnej migawki `data/store/YYYY-MM-DD-structural.ndjson`; zaufany `data/store/structural-backfill.ndjson` (używany przez BigQuery i dalszą analizę) zmienia się wyłącznie przez ręczne scalenie potwierdzonej migawki, nie automatycznie.
 
@@ -66,8 +66,8 @@ Progi zatwierdzone przez właściciela (runda review 1).
 - Jakiekolwiek UI / dashboard / wykresy — konsumpcja wyłącznie plikowo + terminal.
 - Automatyczny load do BigQuery (format ma być gotowy, load ręczny).
 - Konektor Google Drive (auto-pull z folderu) — usunięty w v1.1; ingest wyłącznie ręczny.
-- **Orkiestracja przez n8n** — usunięta w v1.2 (rozjazd Docker/Linux ↔ Apple Vision/macOS, patrz changelog). W V1 pipeline uruchamia operator z terminala. n8n jako kandydat na przyszłość (VPS) — `docs/roadmap.md`.
-- MCP server (V2); FastAPI/Docker/Cloud Run (V3); agenci (V4) — patrz `docs/roadmap.md`.
+- **Orkiestracja przez n8n** — usunięta w v1.2 (rozjazd Docker/Linux ↔ Apple Vision/macOS, patrz changelog). W V1 pipeline uruchamia operator z terminala. n8n jako kandydat na przyszłość (VPS) — `CLAUDE.md`, sekcja „Backlog".
+- MCP server (V2); FastAPI/Docker/Cloud Run (V3, pominięta); agenci (V4); Resources/Prompts MCP (V5) — patrz `CLAUDE.md`, sekcja „Stan projektu".
 - Interpretacja medyczna / rekomendacje zdrowotne jako feature — raporty LLM to materiał do rozmowy z lekarzem, nie diagnoza.
 - Twarde gwarancje prywatności (patrz Threat Model).
 

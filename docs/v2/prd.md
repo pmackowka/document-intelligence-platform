@@ -1,6 +1,6 @@
 # PRD: Document Intelligence Platform — Version 2 (MCP server)
 
-> Status: **v2.1 — zatwierdzony** (spisany po sesji `/grill-with-docs`, na podstawie `docs/v2/00-planning.md` i `docs/roadmap.md`, sekcja „Version 2 — MCP server").
+> Status: **v2.1 — zatwierdzony** (spisany po sesji `/grill-with-docs`, na podstawie `docs/v2/00-planning.md`).
 > Kontrakt V1 (`docs/v1/prd.md`) pozostaje zamknięty i niezmieniony — V2 buduje na jego module bez re-otwierania jego ustaleń.
 > Terminologia domenowa: `CONTEXT.md`. Decyzje architektoniczne trudne do odwrócenia: `docs/adr/0001-mcp-stdio-no-listening-port.md`, `docs/adr/0002-mcp-read-only.md`.
 >
@@ -54,7 +54,7 @@ Oba kryteria wymagają dowodu na poziomie produktu (realne połączenie, realne 
 - **Trzecie narzędzie** (`search_findings` lub inne przeszukiwanie/odkrywanie) — poza `get_marker_trend` i `compare_markers`, niepotwierdzone jako potrzebne.
 - **Interpretacja medyczna / kierunek trendu wbudowany w narzędzie** — spójne z PRD V1 („raporty to materiał do rozmowy z lekarzem, nie diagnoza").
 - Wszystko pozostałe z „Out of scope" PRD V1 nadal obowiązuje bez zmian (inne domeny, dokumenty narracyjne, UI/dashboard, multi-user, twarde gwarancje prywatności).
-- V3 (FastAPI/Docker/Cloud Run), V4 (agenci) — kolejne wersje, `docs/roadmap.md`.
+- V3 (FastAPI/Docker/Cloud Run, pominięta), V4 (agenci), V5 (Resources/Prompts MCP) — kolejne wersje, `CLAUDE.md`, sekcja „Stan projektu".
 
 ## User Stories
 
@@ -88,7 +88,7 @@ Wymóg prywatności pozostaje **miękki** — bez zmian względem V1: to nie sys
 | Wywołujący model źle dopasuje identyfikator markera mimo etykiety | Jawny błąd „nie znaleziono" z podpowiedzią najbliższych dopasowań, nigdy cicha pusta lista |
 | Realne wartości pomiarów trafiają teraz do kontekstu modelu klienta MCP (rozszerzenie zakresu względem V1) | Świadomie zaakceptowane jako rdzeń wartości V2; granica zaufania przesunięta na „kto może się połączyć" (stdio, opt-in per klient) zamiast „co idzie do API" |
 | Operator błędnie skonfiguruje serwer w nieznanym/niezaufanym kliencie MCP | Poza kontrolą serwera — to decyzja operatora per klient, nazwana wprost w `docs/adr/0001` |
-| V3 (przeniesienie do chmury) wymaga rewizji modelu stdio/lokalnego | Nazwane już w `docs/roadmap.md` i `docs/adr/0001` — rewizja threat model to jawny punkt PRD V3, nie coś do rozwiązania teraz |
+| V3 (przeniesienie do chmury) wymaga rewizji modelu stdio/lokalnego | Nazwane już w `CLAUDE.md` i `docs/adr/0001` — rewizja threat model to jawny punkt PRD V3, nie coś do rozwiązania teraz |
 | Debug log lub log klienta MCP przypadkiem zapisuje treść zapytania (marker, wartość) na dysk | Serwer świadomie nie drukuje treści zapytań/odpowiedzi nigdzie — ani do własnego logu, ani do stderr; jedyny kanał z danymi to zwracana wartość narzędzia |
 | Błąd w kontrakcie narzędzia wykryty dopiero przez realnego klienta (Desktop), trudny do zdiagnozowania | Trzywarstwowa weryfikacja przed produkcją (testy jednostkowe → MCP Inspector → Desktop) izoluje, czy problem jest w serwerze, zanim wejdzie w grę interpretacja modelu klienta |
 

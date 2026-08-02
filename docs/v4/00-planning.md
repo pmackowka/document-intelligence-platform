@@ -4,7 +4,7 @@
 
 Domknąć fazę przedimplementacyjną Version 4 tym samym trybem, co V1 i V2: sesja sokratejska → PRD zatwierdzony → dopiero wtedy pierwszy etap implementacyjny. Ten plik **nie jest planem implementacji** — to jedyny etap, który istnieje, dopóki `docs/v4/prd.md` nie ma statusu „zatwierdzony".
 
-Zalążek zakresu (do zweryfikowania/rozszerzenia w sesji sokratejskiej, nie do traktowania jako ustalone): agent zdolny wyszukiwać dokumenty, analizować historię, wykonywać wieloetapowe zadania i planować kroki — zbudowany nad serwerem MCP z V2 (`get_marker_trend`, `compare_markers`), lokalnie, **bez przechodzenia przez V3** (przeniesienie do chmury świadomie pominięte na razie — koszt GCP/VPS nieuzasadniony na tym etapie, decyzja odnotowana w `docs/roadmap.md`, sekcja „Zasada kolejności"). Framework do wyboru w sesji sokratejskiej: LangGraph, OpenAI Agents SDK lub Claude Agent SDK (naturalny kandydat przy istniejącym stacku). Pełny opis i diagram: `docs/roadmap.md`, sekcja „Version 4 — Architektura agentowa".
+Zalążek zakresu (do zweryfikowania/rozszerzenia w sesji sokratejskiej, nie do traktowania jako ustalone): agent zdolny wyszukiwać dokumenty, analizować historię, wykonywać wieloetapowe zadania i planować kroki — zbudowany nad serwerem MCP z V2 (`get_marker_trend`, `compare_markers`), lokalnie, **bez przechodzenia przez V3** (przeniesienie do chmury świadomie pominięte na razie — koszt GCP/VPS nieuzasadniony na tym etapie, decyzja odnotowana w `CLAUDE.md`, sekcja „Stan projektu"). Framework do wyboru w sesji sokratejskiej: LangGraph, OpenAI Agents SDK lub Claude Agent SDK (naturalny kandydat przy istniejącym stacku). Pełny, zatwierdzony zakres: `docs/v4/prd.md`. Diagram: `README.md`, sekcja „Architektura — mapa wersji".
 
 ## Zakres / Definition of Done
 

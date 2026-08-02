@@ -8,15 +8,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **V2** (serwer MCP nad tym samym magazynem — `get_marker_trend`, `compare_markers`, transport stdio) — w pełni zaimplementowana i zamknięta. Kontrakt: `docs/v2/prd.md` (status „zatwierdzony"), etapy `00`–`03`, wszystkie checkboxy odhaczone.
 
-**V3** (przeniesienie do chmury) — świadomie pominięta na razie: operator nie chce ponosić kosztów GCP Cloud Run ani VPS. Decyzja i uzasadnienie: `docs/roadmap.md`, sekcja „Zasada kolejności". Backlog, nie usunięta z roadmapy — do podjęcia, gdy pojawi się uzasadnienie kosztowe/produktowe.
+**V3** (przeniesienie do chmury) — świadomie pominięta na razie: operator nie chce ponosić kosztów utrzymania (GCP Cloud Run ani VPS, np. mikr.us). V4 zbudowana bezpośrednio na V2, lokalnie, bez przechodzenia przez V3 — brak stwierdzonej zależności technicznej (agent z V4 działa lokalnie nad tym samym lokalnym serwerem MCP co V2). Backlog — do podjęcia, gdy pojawi się uzasadnienie kosztowe/produktowe dla hostingu zdalnego.
 
 **V4** (architektura agentowa nad serwerem MCP z V2, bez przechodzenia przez V3 — jednorazowy agent `src/agent.py`, zawężony toolset, bez auto-memory) — w pełni zaimplementowana i zamknięta. Kontrakt: `docs/v4/prd.md` (status „zatwierdzony"), etap `01`, wszystkie checkboxy odhaczone, S1/S2 na realnych danych.
 
-**V5** (Prompts i Resources MCP nad tym samym serwerem z V2 — `markers://catalog`, `report://latest`, prompt `porownaj_markery`; nadobowiązkowy krok nauki mechaniki protokołu, nie luka produktowa) — w implementacji. Kontrakt: `docs/v5/prd.md` (status „zatwierdzony"), etap `01`.
+**V5** (Prompts i Resources MCP nad tym samym serwerem z V2 — `markers://catalog`, `report://latest`, prompt `porownaj_markery`; nadobowiązkowy krok nauki mechaniki protokołu, nie luka produktowa) — w pełni zaimplementowana i zamknięta. Kontrakt: `docs/v5/prd.md` (status „zatwierdzony"), etap `01`, wszystkie checkboxy odhaczone, zweryfikowane w Inspectorze i w Claude Desktop.
 
-**Kontrakt dla bieżącej pracy to PRD wersji aktualnie w implementacji** — sprawdź, który plik `docs/<wersja>/prd.md` ma status „zatwierdzony" i brakujące checkboxy w etapach; to on obowiązuje, nie z automatu `docs/v1/prd.md`. Każda zmiana zakresu wymaga aktualizacji odpowiedniego `prd.md`, nie tylko kodu. `docs/roadmap.md` to backlog strategiczny — nie implementuj z niego niczego poza kontraktem wersji aktualnie w toku.
+**Kontrakt dla bieżącej pracy to PRD wersji aktualnie w implementacji** — sprawdź, który plik `docs/<wersja>/prd.md` ma status „zatwierdzony" i brakujące checkboxy w etapach; to on obowiązuje, nie z automatu `docs/v1/prd.md`. Każda zmiana zakresu wymaga aktualizacji odpowiedniego `prd.md`, nie tylko kodu. Sekcja „Backlog" niżej to strategiczne pomysły na przyszłość — nie implementuj z niej niczego poza kontraktem wersji aktualnie w toku.
 
-Dokumentacja etapowa żyje płasko pod `docs/<wersja>/` (`docs/v1/`, `docs/v2/`, `docs/v4/`, ...) — każda wersja ma własny `prd.md` i pliki etapów `00`–`NN` bezpośrednio w tym folderze (bez pośredniego podfolderu `stages/` — za dużo klikania), zgodnie z regułą z `docs/roadmap.md` („każda wersja przed startem przechodzi własną sesję sokratejską i dostaje własny PRD"). Workflow etapowy (checkboxy, struktura Notatek) opisany w sekcji „Praca etapami" niżej obowiązuje identycznie we wszystkich wersjach, nie tylko w `docs/v1/`, gdzie powstał.
+Dokumentacja etapowa żyje płasko pod `docs/<wersja>/` (`docs/v1/`, `docs/v2/`, `docs/v4/`, `docs/v5/`, ...) — każda wersja ma własny `prd.md` i pliki etapów `00`–`NN` bezpośrednio w tym folderze (bez pośredniego podfolderu `stages/` — za dużo klikania). Każda wersja przed startem przechodzi własną sesję sokratejską i dostaje własny PRD — reguła stosowana konsekwentnie od V1. Workflow etapowy (checkboxy, struktura Notatek) opisany w sekcji „Praca etapami" niżej obowiązuje identycznie we wszystkich wersjach, nie tylko w `docs/v1/`, gdzie powstał.
 
 ## Czym jest ten projekt
 
@@ -56,7 +56,7 @@ Zasady przekrojowe:
 - **OCR**: Docling (główny silnik) + Apple Vision jako backend dla zdjęć. Środowisko: lokalnie na macOS.
 - **LLM: wyłącznie Claude przez abonament Pro — zero zakupu tokenów API.** Wywołania programistyczne przez Claude Code headless: `claude -p "<prompt>"` jako komenda shell z Pythona. Weryfikacja aliasów: Haiku (`--model`). Nie dodawaj kodu używającego kluczy API Anthropic ani SDK z rozliczeniem tokenowym.
 - Kod i nazwy po angielsku, komentarze i docstringi po polsku.
-- Diagramy Mermaid: etykiety węzłów zawsze w cudzysłowach (`A["..."]`), bez znaku `"` w treści etykiet — pełne reguły i historia incydentu na końcu `docs/roadmap.md`.
+- **Diagramy Mermaid** (np. w README): etykiety węzłów zawsze w cudzysłowach — `A["etykieta"]`, nigdy `A[etykieta]` — obowiązkowo gdy etykieta zawiera dwukropek, przecinek, `+`, nawiasy lub polskie znaki interpunkcyjne. Żadnych cudzysłowów wewnątrz etykiet (także polskich „...") — znak `"` w treści etykiety łamie parser GitHuba (incydent: diagram V5, commit `88e5dc2`; objaw: `Unable to render rich display, got 'STR'`). Cytaty parafrazuj bez cudzysłowów. Po każdej zmianie diagramu zweryfikuj render na GitHubie, nie tylko lokalnie.
 
 ## Praca etapami
 
@@ -81,6 +81,15 @@ Etap skończony = wszystkie checkboxy odhaczone lub świadomie skreślone z adno
 
 ## Out of scope V1 (nie implementuj bez zmiany PRD)
 
-Domeny inne niż medyczna; przetwarzanie dokumentów narracyjnych (USG/MRI/TK/kolonoskopia); orkiestracja przez n8n (usunięta w PRD v1.2 — uruchamianie ręczne z terminala); UI/dashboard/wykresy; automatyczny load do BigQuery; dziennik interwencji/stylu życia; FastAPI/Docker/Cloud Run, MCP server, agenci (to wersje V2–V4 z zarysu).
+Domeny inne niż medyczna; przetwarzanie dokumentów narracyjnych (USG/MRI/TK/kolonoskopia); orkiestracja przez n8n (usunięta w PRD v1.2 — uruchamianie ręczne z terminala); UI/dashboard/wykresy; automatyczny load do BigQuery; dziennik interwencji/stylu życia; FastAPI/Docker/Cloud Run, MCP server, agenci, Resources/Prompts MCP (to wersje V2–V5, już zrealizowane poza V3).
 
 Jeśli przy okazji innej pracy natkniesz się na plik, fragment kodu lub dokumentu dotyczący **wyłącznie** przetwarzania danych narracyjnych — zgłoś operatorowi do potwierdzenia, nie usuwaj automatycznie. Nie skanuj repo proaktywnie w tym celu, tylko przy okazji.
+
+## Backlog (strategiczny, nie kontrakt — nie implementuj bez własnej sesji sokratejskiej i PRD)
+
+**Rozszerzenia domenowe** — świadomie wycięte z V1 (decyzja z sesji sokratejskiej: jedna domena, pełny pipeline). Możliwy powrót, każde jako osobny PRD:
+
+- **Legal** (umowy, NDA, pisma) — inny pipeline niż medyczny; wspólne tylko OCR (~15% reuse). Realistyczny start: ścieżka „anonymize & ask" bez strukturyzacji.
+- **Finance** (faktury, raporty), **HR** (CV, umowy), **Technical** (instrukcje, manuale).
+
+**n8n na VPS** — n8n usunięty z V1 (PRD v1.2), bo lokalny kontener Docker (Linux) nie odpala Apple Vision (macOS). Uruchomienie n8n na VPS (np. [mikr.us](https://mikr.us/)) obchodzi problem od innej strony: n8n orkiestruje w chmurze, a pipeline biegnie tam z serwerowym silnikiem OCR (nie Apple Vision) — czyli i tak wymaga wcześniej zamiany OCR (ta sama praca co V3). Cel: nauka n8n + orkiestracja produkcyjna. Podjąć tylko gdy będzie na to czas i ochota — nie blokuje żadnej wersji.

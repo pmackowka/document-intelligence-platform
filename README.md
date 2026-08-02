@@ -2,12 +2,87 @@
 
 Lokalna platforma do przetwarzania osobistej dokumentacji medycznej z analizą trendów w czasie. Projekt służy równolegle jako ścieżka nauki stacku AI Engineering.
 
+## Architektura — mapa wersji
+
+| Wersja | Co robi | Status |
+|---|---|---|
+| V1 | OCR → standaryzacja → magazyn NDJSON → raporty Markdown | zamknięta |
+| V2 | Serwer MCP (Tools) nad tym samym magazynem | zamknięta |
+| V3 | Przeniesienie do chmury | pominięta świadomie (backlog) |
+| V4 | Agent (Claude Agent SDK) orkiestrujący narzędzia MCP z V2 | zamknięta |
+| V5 | Resources i Prompts MCP nad tym samym serwerem (nadobowiązkowa) | zamknięta |
+
+### V1 — fundament: OCR → standaryzacja → magazyn → raport
+
+```mermaid
+flowchart TD
+    IN["Nowy dokument<br>upload ręczny do data/raw/structural"] --> OCR["OCR: Docling<br>+ Apple Vision dla zdjęć"]
+    OCR --> ST["Standaryzacja<br>aliases.yml → regex → units.yml"]
+    ST --> AV["Weryfikacja nieznanych nazw<br>claude -p --model haiku"]
+    AV --> PA["pending/*.yml<br>operator zatwierdza"]
+    PA --> D[("Magazyn NDJSON<br>append-only, BigQuery-ready")]
+    D --> AN["Analiza trendów<br>Claude Code w terminalu"]
+    AN --> RP["Raport Markdown<br>na wizytę lekarską"]
+```
+
+### V2 — serwer MCP nad magazynem z V1
+
+```mermaid
+flowchart LR
+    subgraph Klienty MCP
+        C1[Claude Code]
+        C2[Claude Desktop]
+        C3[Inne klienty]
+    end
+    C1 & C2 & C3 --> S[MCP Server<br>lokalnie na Macu]
+    S --> T1[get_marker_trend]
+    S --> T2[compare_markers]
+    T1 & T2 --> D[(NDJSON + Markdown<br>magazyn z V1)]
+```
+
+### V3 — przeniesienie do chmury (pominięta, backlog)
+
+```mermaid
+flowchart LR
+    T["Trigger<br>upload / cron"] -->|HTTP request| API["FastAPI<br>w kontenerze Docker"]
+    subgraph "Cloud Run lub Mac mini — decyzja threat model"
+        API --> P["Pipeline Python<br>moduły z V1, OCR do zamiany"]
+    end
+    P --> D[("Magazyn NDJSON")]
+    P --> R["Raporty Markdown"]
+```
+
+### V4 — agent nad serwerem MCP z V2
+
+```mermaid
+flowchart TD
+    U["Użytkownik:<br>przygotuj mnie do wizyty u nefrologa"] --> A["Agent<br>planowanie kroków"]
+    A -->|krok 1| T1["MCP: get_marker_trend<br>kreatynina, eGFR"]
+    A -->|krok 2| T2["MCP: compare_markers"]
+    T1 & T2 --> S[Synteza wieloetapowa]
+    S --> O["Raport na wizytę<br>+ pytania do lekarza"]
+```
+
+### V5 — Resources i Prompts MCP nad tym samym serwerem
+
+```mermaid
+flowchart LR
+    C["Inspector / Claude Desktop"] --> S[MCP Server]
+    S --> R1["Resource: markers://catalog"]
+    S --> R2["Resource: report://latest"]
+    S --> P1["Prompt: porownaj_markery"]
+    R1 & R2 --> CTX[Kontekst rozmowy]
+    P1 --> MSG[Gotowy tekst zapytania]
+```
+
+Pełne uzasadnienie decyzji, ryzyka i kompetencje nauki dla każdej wersji: `CLAUDE.md` (status i decyzja o pominięciu V3) oraz `docs/v4/prd.md`, `docs/v5/prd.md`.
+
 ## Dokumentacja
 
-- **`docs/v1/prd.md`** — kontrakt Version 1 (zakres, wymagania, kryteria sukcesu)
-- **`docs/roadmap.md`** — backlog wersji V2–V4 z diagramami architektury
-- **`docs/v1/`** — plan implementacji krok po kroku (etapy 00–04)
-- **`docs/v2/`** — Version 2 (MCP server), w implementacji — patrz `docs/v2/prd.md`
+- **`docs/v1/`** — Version 1 (OCR → magazyn → raporty), zamknięta — kontrakt `docs/v1/prd.md`, plan `00`–`04`
+- **`docs/v2/`** — Version 2 (serwer MCP), zamknięta — kontrakt `docs/v2/prd.md`, plan `00`–`03`
+- **`docs/v4/`** — Version 4 (agent nad MCP), zamknięta — kontrakt `docs/v4/prd.md`, plan `01`
+- **`docs/v5/`** — Version 5 (Resources/Prompts MCP, nadobowiązkowa), zamknięta — kontrakt `docs/v5/prd.md`, plan `01`
 - **`CLAUDE.md`** — konwencje projektu dla sesji Claude Code
 
 ## Stack

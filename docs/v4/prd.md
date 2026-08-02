@@ -2,7 +2,7 @@
 
 > Status: **v4.1 — zatwierdzony**.
 > Kontrakt V1 (`docs/v1/prd.md`) i V2 (`docs/v2/prd.md`) pozostają zamknięte i niezmienione — V4 buduje na module V2 bez re-otwierania jego ustaleń.
-> V3 (przeniesienie do chmury) świadomie pominięta — decyzja i uzasadnienie: `docs/roadmap.md`, sekcja „Zasada kolejności".
+> V3 (przeniesienie do chmury) świadomie pominięta — decyzja i uzasadnienie: `CLAUDE.md`, sekcja „Stan projektu".
 > Terminologia domenowa: `CONTEXT.md`. Decyzje architektoniczne V2, wciąż obowiązujące: `docs/adr/0001-mcp-stdio-no-listening-port.md` (transport), `docs/adr/0002-mcp-read-only.md` (wyłącznie odczyt) — V4 nie zmienia żadnej z nich, tylko dokłada warstwę agentową nad tym samym serwerem.
 >
 > **v4.1 (runda review 1):** trzy luki z v4.0 rozstrzygnięte i zweryfikowane empirycznie (nie tylko dokumentacją) — nazewnictwo plików wyjściowych bez ryzyka nadpisania, potwierdzony mechanizm zawężenia toolsetu/pamięci w `ClaudeAgentOptions`, trójwarstwowa strategia weryfikacji analogiczna do V2.
@@ -47,7 +47,7 @@ Oba kryteria wymagają dowodu end-to-end na realnych danych — sama poprawna od
 - **Nowe narzędzia MCP** (`search_findings` i podobne) — patrz Scope, punkt 5.
 - **Zapis/akcje modyfikujące dane** — agent V4 dziedziczy „wyłącznie odczyt" z V2 (`docs/adr/0002`); nie zatwierdza aliasów, nie modyfikuje magazynu.
 - **Pełny toolset Claude Code** (Bash, Write, Edit, dostęp do systemu plików poza `data/agent/`) — świadomie wyłączone, patrz Scope, punkt 3.
-- **Transport sieciowy / hosting zdalny** — V3 nadal pominięta (`docs/roadmap.md`); agent działa lokalnie, nad tym samym lokalnym serwerem MCP co V2.
+- **Transport sieciowy / hosting zdalny** — V3 nadal pominięta (`CLAUDE.md`); agent działa lokalnie, nad tym samym lokalnym serwerem MCP co V2.
 - Wszystko pozostałe z „Out of scope" PRD V1 i V2 nadal obowiązuje bez zmian.
 
 ## User Stories
@@ -96,7 +96,7 @@ Wymóg prywatności pozostaje **miękki**, bez zmian względem V1/V2.
 | Sesja Agent SDK dziedziczy pełny toolset/pamięć/config Claude Code, jeśli `ClaudeAgentOptions` nie zostanie jawnie zawężone | Zweryfikowane empirycznie w rundzie review — konkretna konfiguracja (`tools=[]`, `mcp_servers`, `setting_sources=[]`, `exclude_dynamic_sections`) opisana w Tech Constraints, nie tylko nazwana jako wymóg |
 | Agent poprawnie planuje wywołanie narzędzia, ale utyka na prośbie o uprawnienia w trybie jednorazowym (brak kogoś, kto by ją zatwierdził) | Znalezione i naprawione w rundzie review — `allowed_tools` z jawnie wskazanymi dwoma narzędziami |
 | Zużycie limitu pięciogodzinnego (subskrypcja Pro) współdzielone ze zwykłym użyciem Claude Code w tym samym oknie czasowym | Świadomie zaakceptowane — to bezpośrednia konsekwencja wyboru „zero kluczy API"; brak dodatkowej mitygacji na tym etapie |
-| V3 (przeniesienie do chmury) wymaga rewizji modelu lokalnego/stdio | Nazwane już w `docs/roadmap.md` i `docs/adr/0001` — nie dotyczy V4, dopóki V3 pozostaje pominięta |
+| V3 (przeniesienie do chmury) wymaga rewizji modelu lokalnego/stdio | Nazwane już w `CLAUDE.md` i `docs/adr/0001` — nie dotyczy V4, dopóki V3 pozostaje pominięta |
 
 ### Rozstrzygnięte (sesja sokratejska)
 

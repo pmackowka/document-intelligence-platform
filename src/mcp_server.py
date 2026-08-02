@@ -16,7 +16,9 @@ def get_marker_trend(identyfikator: str) -> dict:
     """Zwraca serię pomiarów markera (kod kanoniczny, np. HGB, lub polska etykieta,
     np. Hemoglobina) z zaufanego magazynu. Gdy marker ma więcej niż jedną serię
     (różne jednostki pod tym samym kodem), zwraca wszystkie, pogrupowane po jednostce.
-    Surowe rekordy — bez interpretacji (kierunek trendu, delta itd.)."""
+    Surowe rekordy — bez interpretacji (kierunek trendu, delta itd.).
+
+    Przykład do wklejenia w Inspectorze (pole "identyfikator"): HGB"""
     try:
         code = resolve_marker(identyfikator)
     except MarkerNotFound as e:
@@ -32,7 +34,9 @@ def compare_markers(identyfikatory: list[str]) -> dict:
     etykiety) — N niezależnych serii, świadomie bez łączenia po dacie badania
     (różne markery mogą mieć różne daty pomiarów; nie zgadujemy, które sobie
     odpowiadają). Ta sama logika identyfikacji i grupowania po jednostce co
-    get_marker_trend, zastosowana do każdego identyfikatora z osobna."""
+    get_marker_trend, zastosowana do każdego identyfikatora z osobna.
+
+    Przykład do wklejenia w Inspectorze (pole "identyfikatory", JSON): ["HGB", "OB"]"""
     records = load_records()
     results = []
     for identyfikator in identyfikatory:
@@ -49,7 +53,10 @@ def compare_markers(identyfikatory: list[str]) -> dict:
 @mcp.resource("markers://catalog")
 def markers_catalog() -> str:
     """Katalog kodów kanonicznych i polskich etykiet markerów (marker_labels.yml) — wyłącznie
-    metadane domenowe, zero wartości pomiarów, zero PII."""
+    metadane domenowe, zero wartości pomiarów, zero PII.
+
+    Bez parametrów — w Inspectorze wystarczy kliknąć tę pozycję na liście Resources,
+    żeby odczytać zawartość."""
     labels = load_labels()
     return "\n".join(f"{code}: {label}" for code, label in sorted(labels.items()))
 
@@ -58,7 +65,10 @@ def markers_catalog() -> str:
 def report_latest() -> str:
     """Treść najnowszego raportu Markdown z data/reports/ (nagłówek pliku niesie tryb —
     zaufany magazyn albo KANDYDAT). Jawny komunikat zamiast wyjątku, gdy folder jest pusty —
-    ta sama zasada "nigdy cicha pustka" co przy nierozpoznanym identyfikatorze markera."""
+    ta sama zasada "nigdy cicha pustka" co przy nierozpoznanym identyfikatorze markera.
+
+    Bez parametrów — w Inspectorze wystarczy kliknąć tę pozycję na liście Resources,
+    żeby odczytać zawartość."""
     path = latest_report()
     if path is None:
         return "Brak wygenerowanych raportów w data/reports/ — najpierw uruchom report.py."
@@ -68,7 +78,9 @@ def report_latest() -> str:
 @mcp.prompt()
 def porownaj_markery(marker1: str, marker2: str) -> str:
     """Gotowy szablon zapytania o porównanie dwóch markerów w czasie — zaszywa raz poprawnie
-    działającą frazę, zamiast wymagać, żeby operator pamiętał ją za każdym razem."""
+    działającą frazę, zamiast wymagać, żeby operator pamiętał ją za każdym razem.
+
+    Przykład do wklejenia w Inspectorze: marker1 = Hemoglobina, marker2 = OB"""
     return f"Porównaj moje wyniki {marker1} i {marker2} w czasie."
 
 

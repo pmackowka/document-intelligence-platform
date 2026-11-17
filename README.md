@@ -1,4 +1,4 @@
-# Document Intelligence Platform
+# document-intelligence-platform
 
 Lokalna platforma do przetwarzania osobistej dokumentacji medycznej z analizą trendów w czasie. Projekt służy równolegle jako ścieżka nauki stacku AI Engineering.
 
